@@ -1,10 +1,10 @@
-import { scenarios } from "./scenarios.js";
+const scenarios = require("./scenarios");
 
 let step = 0;
 let fireIntensity = 100;
 
-export default function handler(req, res) {
-  const { scenario = "kitchen" } = req.query;
+module.exports = (req, res) => {
+  const scenario = req.query.scenario || "kitchen";
   const selected = scenarios[scenario];
 
   if (!selected) {
@@ -41,4 +41,4 @@ export default function handler(req, res) {
     fireIntensity,
     log: `Scenario: ${selected.name} | State: ${state}`
   });
-}
+};
