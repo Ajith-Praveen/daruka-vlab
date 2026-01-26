@@ -1,56 +1,26 @@
-import { scenarios } from "./scenarios.js";
-
-let simulationState = {
-  state: "IDLE",
-  fireIntensity: 0,
-  log: "Waiting to start"
+const scenarios = {
+  kitchen: [
+    { state: "SEARCHING", log: "Scanning kitchen area", fireIntensity: 100 },
+    { state: "FIRE_DETECTED", log: "Fire detected near stove", fireIntensity: 100 },
+    { state: "AIMING", log: "Aligning nozzle toward fire", fireIntensity: 70 },
+    { state: "EXTINGUISHING", log: "Releasing extinguisher", fireIntensity: 30 },
+    { state: "FIRE_EXTINGUISHED", log: "Fire extinguished successfully", fireIntensity: 0 },
+    { state: "IDLE", log: "Mission complete", fireIntensity: 0 }
+  ]
 };
 
+let step = 0;
+
 export default function handler(req, res) {
-  const scenario = scenarios[req.query.scenario || "kitchen"];
+  const scenarioName = req.query.scenario || "kitchen";
+  const scenario = scenarios[scenarioName];
 
-  switch (simulationState.state) {
-    case "IDLE":
-      simulationState = {
-        state: "SCANNING",
-        fireIntensity: scenario.fireIntensity,
-        log: "Scanning environment for fire"
-      };
-      break;
-
-    case "SCANNING":
-      simulationState.state = "FIRE_DETECTED";
-      simulationState.log = "Fire detected by flame sensor array";
-      break;
-
-    case "FIRE_DETECTED":
-      simulationState.state = "ALIGNING";
-      simulationState.log = "Aligning nozzle toward fire source";
-      break;
-
-    case "ALIGNING":
-      simulationState.state = "EXTINGUISHING";
-      simulationState.log = "Aerosol extinguisher activated";
-      break;
-
-    case "EXTINGUISHING":
-      simulationState.fireIntensity -= 30;
-      simulationState.log = "Extinguishing fire...";
-
-      if (simulationState.fireIntensity <= 0) {
-        simulationState.state = "CLEARED";
-        simulationState.log = "Fire successfully extinguished";
-      }
-      break;
-
-    case "CLEARED":
-      simulationState.state = "IDLE";
-      simulationState.log = "Simulation reset";
-      break;
+  if (!scenario) {
+    return res.status(400).json({ error: "Invalid scenario" });
   }
 
-  res.status(200).json({
-    scenario: scenario.name,
-    ...simulationState
-  });
+  const data = scenario[step] || scenario[scenario.length - 1];
+  step = (step + 1) % scenario.length;
+
+  res.status(200).json(data);
 }

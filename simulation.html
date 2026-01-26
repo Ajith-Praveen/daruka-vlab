@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Firefighting Simulation | DARUKA VLab</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+<header class="top-bar">
+  <h2>Firefighting Simulation</h2>
+  <a href="index.html" class="back-link">⬅ Back to Lab</a>
+</header>
+
+<div class="simulation-container">
+
+  <!-- VISUAL AREA -->
+  <div class="simulation-visual">
+    <div class="room">
+      <div id="fire" class="fire"></div>
+      <div id="robot" class="robot">🤖</div>
+    </div>
+  </div>
+
+  <!-- CONTROL + LOG -->
+  <div class="simulation-panel">
+    <button onclick="startSimulation()">▶ Start Simulation</button>
+
+    <h3>Simulation State</h3>
+    <p><strong>State:</strong> <span id="state">IDLE</span></p>
+    <p><strong>Log:</strong> <span id="log">Waiting...</span></p>
+  </div>
+
+</div>
+
+<script src="js/simulation.js"></script>
+</body>
+</html>

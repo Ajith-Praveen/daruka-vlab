@@ -252,3 +252,73 @@ h1 {
   outline: none;
 }
 
+/* ================= SIMULATION PAGE ================= */
+
+.simulation-container {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  height: calc(100vh - 64px);
+}
+
+.simulation-visual {
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.room {
+  width: 80%;
+  height: 80%;
+  background: #222;
+  position: relative;
+  border-radius: 16px;
+}
+
+.fire {
+  width: 80px;
+  height: 80px;
+  background: orange;
+  border-radius: 50%;
+  position: absolute;
+  top: 30%;
+  right: 20%;
+  opacity: 1;
+  transition: opacity 0.8s ease;
+}
+
+.robot {
+  position: absolute;
+  bottom: 20%;
+  left: 20%;
+  font-size: 48px;
+}
+
+.simulation-panel {
+  padding: 24px;
+  background: var(--panel);
+  border-left: 1px solid #1f2630;
+}
+
+.simulation-panel button {
+  background: var(--accent);
+  color: #000;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 900px) {
+  .simulation-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+  }
+
+  .simulation-panel {
+    border-left: none;
+    border-top: 1px solid #1f2630;
+  }
+}
