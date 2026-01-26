@@ -213,9 +213,7 @@ h1 {
   transform: scale(1.25);
 }
 
-/* =================================================
-   SIMULATION PAGE
-================================================= */
+/* ===== SIMULATION PAGE ===== */
 
 .simulation-container {
   display: grid;
@@ -230,31 +228,30 @@ h1 {
   justify-content: center;
 }
 
-.room {
+.map {
   width: 85%;
   height: 85%;
-  background: #222;
   position: relative;
   border-radius: 16px;
 }
 
+.kitchen { background: #2a2a2a; }
+.lab { background: #1e2f3a; }
+.room-map { background: #222; }
+
 .fire {
-  width: 80px;
-  height: 80px;
+  width: 70px;
+  height: 70px;
   background: radial-gradient(circle, #ff9800, red);
   border-radius: 50%;
   position: absolute;
-  top: 30%;
-  right: 20%;
   transition: opacity 0.8s ease;
 }
 
 .robot {
   position: absolute;
-  bottom: 15%;
-  left: 15%;
-  font-size: 48px;
-  transition: left 1s linear, top 1s linear;
+  font-size: 46px;
+  transition: top 1.2s linear, left 1.2s linear;
 }
 
 .simulation-panel {
@@ -263,18 +260,15 @@ h1 {
   border-left: 1px solid #1f2630;
 }
 
-.simulation-panel button {
-  background: var(--accent);
-  color: #000;
-  border: none;
-  padding: 12px 20px;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  margin-bottom: 20px;
+.battery-warning {
+  color: #ff4d4d;
+  margin-top: 12px;
 }
 
-/* SIMULATION MOBILE */
+.hidden {
+  display: none;
+}
+
 @media (max-width: 900px) {
   .simulation-container {
     grid-template-columns: 1fr;

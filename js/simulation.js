@@ -1,6 +1,3 @@
-import { scenarios } from "../api/scenarios.js";
-
-let patrolIndex = 0;
 let running = false;
 
 const robot = document.getElementById("robot");
@@ -12,43 +9,38 @@ function move(el, pos) {
   el.style.left = pos.left + "%";
 }
 
-export async function startSimulation() {
+async function startSimulation() {
+  if (running) return;
   running = true;
-  patrolIndex = 0;
-
-  const scenario = document.getElementById("scenario").value;
-  const data = scenarios[scenario];
-
-  map.className = `map ${data.mapClass}`;
-  move(fire, data.fire);
-
-  patrol(data, scenario);
+  runStep();
 }
 
-async function patrol(data, scenario) {
+async function runStep() {
   if (!running) return;
 
-  move(robot, data.patrol[patrolIndex]);
-  patrolIndex = (patrolIndex + 1) % data.patrol.length;
-
+  const scenario = document.getElementById("scenario").value;
   const res = await fetch(`/api/simulate?scenario=${scenario}`);
-  const sim = await res.json();
+  const data = await res.json();
 
-  document.getElementById("state").innerText = sim.state;
-  document.getElementById("battery").innerText = sim.battery + "%";
+  document.getElementById("state").innerText = data.state;
+  document.getElementById("battery").innerText = data.battery + "%";
 
-  fire.style.opacity = sim.fireIntensity / 100;
+  map.className = `map ${data.mapClass}`;
 
-  if (sim.state === "LOW_BATTERY") {
-    alert("Battery low! Please charge the robot.");
+  move(fire, data.firePos);
+  fire.style.opacity = data.fireIntensity / 100;
+
+  if (data.state === "EXTINGUISHING") {
+    move(robot, data.firePos);
+  } else {
+    move(robot, data.patrol[data.patrolIndex]);
+  }
+
+  if (data.state === "LOW_BATTERY") {
+    document.getElementById("battery-warning").classList.remove("hidden");
     running = false;
     return;
   }
 
-  if (sim.fireIntensity <= 0) {
-    setTimeout(() => patrol(data, scenario), 2000);
-  } else {
-    move(robot, data.fire);
-    setTimeout(() => patrol(data, scenario), 1500);
-  }
+  setTimeout(runStep, 1200);
 }

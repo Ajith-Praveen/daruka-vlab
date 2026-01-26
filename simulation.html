@@ -1,37 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Firefighting Simulation</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Firefighting Simulation | DARUKA VLab</title>
+
   <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
+
 <header class="top-bar">
   <h2>Firefighting Simulation</h2>
-  <a href="index.html" class="back-link">⬅ Back</a>
+  <a href="index.html" class="back-link">⬅ Back to Lab</a>
 </header>
 
 <div class="simulation-container">
 
+  <!-- VISUAL MAP -->
   <div class="simulation-visual">
-    <div id="map" class="map">
+    <div id="map" class="map kitchen">
       <div id="fire" class="fire"></div>
       <div id="robot" class="robot">🤖</div>
     </div>
   </div>
 
+  <!-- CONTROL PANEL -->
   <div class="simulation-panel">
-    <select id="scenario">
-      <option value="kitchen">Kitchen</option>
-      <option value="lab">Laboratory</option>
-      <option value="room">Room</option>
-    </select>
 
-    <button onclick="startSimulation()">▶ Start</button>
+    <label>
+      Scenario:
+      <select id="scenario">
+        <option value="kitchen">Kitchen</option>
+        <option value="lab">Laboratory</option>
+        <option value="room">Room</option>
+      </select>
+    </label>
+
+    <button onclick="startSimulation()">▶ Start Simulation</button>
 
     <p><b>State:</b> <span id="state">IDLE</span></p>
     <p><b>Battery:</b> <span id="battery">100%</span></p>
+
+    <div id="battery-warning" class="battery-warning hidden">
+      ⚠ Battery low! Please charge the robot.
+    </div>
+
   </div>
 
 </div>
