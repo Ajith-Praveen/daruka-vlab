@@ -1,41 +1,44 @@
 import { scenarios } from "./scenarios.js";
 
-let battery = 100;
+let step = 0;
 let fireIntensity = 100;
-let patrolIndex = 0;
 
 export default function handler(req, res) {
-  const { scenario } = req.query;
-  const map = scenarios[scenario];
+  const { scenario = "kitchen" } = req.query;
+  const selected = scenarios[scenario];
 
-  if (!map) {
-    return res.status(400).json({ error: "Invalid scenario" });
+  if (!selected) {
+    return res.status(400).json({
+      state: "ERROR",
+      log: "Invalid scenario",
+      fireIntensity: 0
+    });
   }
 
-  battery -= 3;
+  const states = [
+    "SEARCHING",
+    "FIRE_DETECTED",
+    "AIMING",
+    "EXTINGUISHING",
+    "IDLE"
+  ];
 
-  let state = "PATROL";
+  let state = states[Math.min(step, states.length - 1)];
 
-  if (fireIntensity > 0) {
-    state = "EXTINGUISHING";
+  if (state === "EXTINGUISHING") {
     fireIntensity -= 20;
+    if (fireIntensity <= 0) {
+      fireIntensity = 0;
+      state = "IDLE";
+      step = 0;
+    }
+  } else {
+    step++;
   }
 
-  if (battery <= 20) {
-    state = "LOW_BATTERY";
-  }
-
-  const response = {
+  res.status(200).json({
     state,
-    battery,
     fireIntensity,
-    mapClass: map.mapClass,
-    firePos: map.firePos,
-    patrol: map.patrol,
-    patrolIndex
-  };
-
-  patrolIndex = (patrolIndex + 1) % map.patrol.length;
-
-  res.status(200).json(response);
+    log: `Scenario: ${selected.name} | State: ${state}`
+  });
 }
