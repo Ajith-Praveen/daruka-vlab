@@ -1,13 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Firefighting Simulation</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
-
 <header class="top-bar">
   <h2>Firefighting Simulation</h2>
   <a href="index.html" class="back-link">⬅ Back</a>
@@ -16,23 +15,23 @@
 <div class="simulation-container">
 
   <div class="simulation-visual">
-    <div class="room">
+    <div id="map" class="map">
       <div id="fire" class="fire"></div>
-      <div class="robot">🤖</div>
+      <div id="robot" class="robot">🤖</div>
     </div>
   </div>
 
   <div class="simulation-panel">
+    <select id="scenario">
+      <option value="kitchen">Kitchen</option>
+      <option value="lab">Laboratory</option>
+      <option value="room">Room</option>
+    </select>
+
     <button onclick="startSimulation()">▶ Start</button>
 
-    <p><strong>State:</strong> <span id="state">IDLE</span></p>
-    <p><strong>Battery:</strong> <span id="battery">100%</span></p>
-    <p><strong>Log:</strong> <span id="log">Waiting...</span></p>
-
-    <div id="battery-warning" class="warning" style="display:none;">
-      ⚠ Battery Low!  
-      <button onclick="chargeRobot()">🔌 Charge</button>
-    </div>
+    <p><b>State:</b> <span id="state">IDLE</span></p>
+    <p><b>Battery:</b> <span id="battery">100%</span></p>
   </div>
 
 </div>

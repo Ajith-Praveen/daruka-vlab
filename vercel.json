@@ -1,11 +1,5 @@
 {
-    "cleanUrls": true
-
-}
-{
   "functions": {
-    "api/*.js": {
-      "runtime": "nodejs18.x"
-    }
+    "api/*.js": { "runtime": "nodejs18.x" }
   }
 }
