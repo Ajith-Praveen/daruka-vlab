@@ -13,16 +13,25 @@ async function runStep() {
 
   document.getElementById("state").innerText = data.state;
   document.getElementById("log").innerText = data.log;
+  document.getElementById("battery").innerText = data.battery + "%";
 
   const fire = document.getElementById("fire");
 
   if (data.fireIntensity !== undefined) {
-    fire.style.opacity = Math.max(data.fireIntensity / 100, 0);
+    fire.style.opacity = data.fireIntensity / 100;
   }
 
-  if (data.state !== "IDLE") {
-    setTimeout(runStep, 1200);
-  } else {
+  if (data.state === "LOW_BATTERY") {
+    document.getElementById("battery-warning").style.display = "block";
     running = false;
+    return;
   }
+
+  setTimeout(runStep, 1200);
+}
+
+async function chargeRobot() {
+  document.getElementById("battery-warning").style.display = "none";
+  alert("🔌 Robot charged!");
+  location.reload(); // simple reset for lab demo
 }

@@ -1,38 +1,62 @@
 import { scenarios } from "./scenarios.js";
 
+let battery = 100;
+let fireIntensity = 0;
+let state = "SEARCHING";
+
 export default function handler(req, res) {
   const { scenario } = req.query;
-
   const selected = scenarios[scenario];
 
   if (!selected) {
     return res.status(400).json({
       state: "ERROR",
-      log: "Invalid scenario selected",
-      fireIntensity: 0
+      log: "Invalid scenario",
+      fireIntensity: 0,
+      battery
     });
   }
 
-  // Simple state machine
-  const states = [
-    "SEARCHING",
-    "FIRE_DETECTED",
-    "AIMING",
-    "EXTINGUISHING",
-    "IDLE"
-  ];
+  // Battery drain
+  battery -= 2;
+  if (battery <= 20) {
+    state = "LOW_BATTERY";
+    return res.status(200).json({
+      state,
+      log: "Battery low. Please charge the robot.",
+      fireIntensity,
+      battery
+    });
+  }
 
-  const randomState = states[Math.floor(Math.random() * states.length)];
+  // FSM
+  switch (state) {
+    case "SEARCHING":
+      fireIntensity = selected.maxIntensity;
+      state = "FIRE_DETECTED";
+      break;
 
-  let intensity = selected.fireIntensity;
+    case "FIRE_DETECTED":
+      state = "AIMING";
+      break;
 
-  if (randomState === "EXTINGUISHING") {
-    intensity = Math.max(intensity - 40, 0);
+    case "AIMING":
+      state = "EXTINGUISHING";
+      break;
+
+    case "EXTINGUISHING":
+      fireIntensity -= 30;
+      if (fireIntensity <= 0) {
+        fireIntensity = 0;
+        state = "SEARCHING";
+      }
+      break;
   }
 
   res.status(200).json({
-    state: randomState,
-    log: `Scenario: ${selected.name} | State: ${randomState}`,
-    fireIntensity: intensity
+    state,
+    log: `Scenario: ${selected.name}`,
+    fireIntensity,
+    battery
   });
 }

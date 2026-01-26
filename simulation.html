@@ -2,9 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Firefighting Simulation | DARUKA VLab</title>
-
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <title>Firefighting Simulation</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 
@@ -12,26 +10,29 @@
 
 <header class="top-bar">
   <h2>Firefighting Simulation</h2>
-  <a href="index.html" class="back-link">⬅ Back to Lab</a>
+  <a href="index.html" class="back-link">⬅ Back</a>
 </header>
 
 <div class="simulation-container">
 
-  <!-- VISUAL AREA -->
   <div class="simulation-visual">
     <div class="room">
       <div id="fire" class="fire"></div>
-      <div id="robot" class="robot">🤖</div>
+      <div class="robot">🤖</div>
     </div>
   </div>
 
-  <!-- CONTROL + LOG -->
   <div class="simulation-panel">
-    <button onclick="startSimulation()">▶ Start Simulation</button>
+    <button onclick="startSimulation()">▶ Start</button>
 
-    <h3>Simulation State</h3>
     <p><strong>State:</strong> <span id="state">IDLE</span></p>
+    <p><strong>Battery:</strong> <span id="battery">100%</span></p>
     <p><strong>Log:</strong> <span id="log">Waiting...</span></p>
+
+    <div id="battery-warning" class="warning" style="display:none;">
+      ⚠ Battery Low!  
+      <button onclick="chargeRobot()">🔌 Charge</button>
+    </div>
   </div>
 
 </div>

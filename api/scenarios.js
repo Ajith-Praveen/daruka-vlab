@@ -1,14 +1,14 @@
 export const scenarios = {
   kitchen: {
     name: "Kitchen Fire",
-    fireIntensity: 100
+    maxIntensity: 100
   },
   lab: {
     name: "Laboratory Fire",
-    fireIntensity: 120
+    maxIntensity: 120
   },
   room: {
     name: "Room Fire",
-    fireIntensity: 80
+    maxIntensity: 80
   }
 };
