@@ -1,9 +1,16 @@
 :root {
+  /* Core Colors */
   --bg: #0b0f14;
   --panel: #151a21;
-  --accent: #ff9800;
+  --accent: #ff9800;     /* Orange */
   --text: #e6e6e6;
   --muted: #bfc7d5;
+  
+  /* Extended Palette for Simulation */
+  --danger: #ff4444;     /* Red for fire */
+  --success: #00e676;    /* Green for status */
+  --border: #1f2630;
+  --console-bg: #080a0d;
 }
 
 /* ================= GLOBAL RESET ================= */
@@ -21,36 +28,59 @@ body {
   font-family: 'Inter', sans-serif;
   background: var(--bg);
   color: var(--text);
+  overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
-/* ================= COMMON ================= */
 a {
   text-decoration: none;
   color: inherit;
+  transition: opacity 0.2s;
 }
 
-/* ================= TOP BAR ================= */
+a:hover {
+  opacity: 0.8;
+}
+
+/* ================= TOP BAR (SHARED) ================= */
 .top-bar {
   height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  background: #0f141b;
-  border-bottom: 1px solid #1f2630;
+  padding: 0 24px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  z-index: 100;
+  position: relative;
 }
 
 .top-bar h2 {
   font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 .back-link {
   color: var(--accent);
   font-weight: 600;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Simulation Header Extras */
+.status-indicator {
+  font-size: 0.85rem;
+  color: var(--success);
+  background: rgba(0, 230, 118, 0.1);
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(0, 230, 118, 0.2);
 }
 
 /* =================================================
-   INDEX PAGE
+   INDEX PAGE STYLES
 ================================================= */
 
 .hero {
@@ -68,6 +98,7 @@ a {
 h1 {
   font-size: 2.4rem;
   margin-bottom: 24px;
+  color: #fff;
 }
 
 .hero-image {
@@ -77,6 +108,7 @@ h1 {
   display: block;
   border-radius: 16px;
   box-shadow: 0 0 35px rgba(0,0,0,0.6);
+  border: 1px solid var(--border);
 }
 
 .subtitle {
@@ -84,98 +116,112 @@ h1 {
   margin: 0 auto 48px;
   line-height: 1.6;
   color: var(--muted);
+  font-size: 1.1rem;
 }
 
 .card-container {
   display: grid;
   grid-template-columns: 1fr;
   gap: 24px;
+  padding-bottom: 48px;
 }
 
 .lab-card {
   background: var(--panel);
-  padding: 28px;
-  border-radius: 18px;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  padding: 32px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+}
+
+.lab-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; width: 4px; height: 100%;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 0.3s;
 }
 
 .lab-card h2 {
   color: var(--accent);
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  font-size: 1.4rem;
 }
 
 .lab-card p {
   line-height: 1.6;
   color: #cfd6e4;
+  margin-bottom: 20px;
 }
 
 .lab-card:hover {
   transform: translateY(-6px);
-  box-shadow: 0 0 28px rgba(255,152,0,0.35);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  border-color: rgba(255, 152, 0, 0.3);
 }
 
-/* INDEX DESKTOP */
+.lab-card:hover::before {
+  opacity: 1;
+}
+
+/* Index Responsive */
 @media (min-width: 768px) {
   .card-container {
     grid-template-columns: 1fr 1fr;
   }
 }
 
-/* INDEX MOBILE */
 @media (max-width: 768px) {
-  h1 {
-    font-size: 1.8rem;
-  }
-
-  .logo {
-    width: 64px;
-  }
-
-  .hero {
-    padding: 32px 16px 48px;
-  }
-
-  .hero-image {
-    max-width: 320px;
-  }
-
-  .subtitle {
-    font-size: 0.95rem;
-  }
+  h1 { font-size: 1.8rem; }
+  .logo { width: 64px; }
+  .hero { padding: 32px 16px 48px; }
+  .subtitle { font-size: 0.95rem; }
 }
 
 /* =================================================
-   COMPONENTS PAGE
+   COMPONENTS PAGE STYLES
 ================================================= */
 
 .components-layout {
   display: grid;
-  grid-template-columns: minmax(260px, 320px) 1fr;
-  height: calc(100vh - 64px);
+  grid-template-columns: minmax(280px, 340px) 1fr;
+  height: calc(100vh - 64px); /* Full height minus header */
   overflow: hidden;
 }
 
 .info-panel {
   background: var(--panel);
-  padding: 20px;
+  padding: 24px;
   overflow-y: auto;
-  border-right: 1px solid #1f2630;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .info-panel h3 {
   color: var(--accent);
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+  font-size: 1.1rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
 }
 
 .info-panel p {
   line-height: 1.6;
-  color: #cfd6e4;
+  color: var(--muted);
+  font-size: 0.95rem;
 }
 
 .viewer-panel {
   width: 100%;
   height: 100%;
-  background: #0b0f14;
+  background: #0f1218; /* Slightly lighter than bg for contrast */
+  position: relative;
 }
 
 .viewer-panel model-viewer {
@@ -184,99 +230,163 @@ h1 {
   display: block;
 }
 
-/* COMPONENTS MOBILE */
-@media (max-width: 900px) {
-  .components-layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
-  }
-
-  .info-panel {
-    border-right: none;
-    border-bottom: 1px solid #1f2630;
-    max-height: 40vh;
-  }
-}
-
-/* ================= HOTSPOTS ================= */
+/* Hotspots for 3D Viewer */
 .hotspot {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: var(--accent);
   border: 2px solid #fff;
   cursor: pointer;
-  box-shadow: 0 0 12px rgba(255,152,0,0.9);
+  box-shadow: 0 0 12px rgba(255,152,0,0.8);
+  transition: transform 0.2s;
 }
 
 .hotspot:hover {
-  transform: scale(1.25);
+  transform: scale(1.3);
 }
 
-/* ===== SIMULATION PAGE ===== */
-
-.simulation-container {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  height: calc(100vh - 64px);
-}
-
-.simulation-visual {
-  background: #111;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.map {
-  width: 85%;
-  height: 85%;
-  position: relative;
-  border-radius: 16px;
-}
-
-.kitchen { background: #2a2a2a; }
-.lab { background: #1e2f3a; }
-.room-map { background: #222; }
-
-.fire {
-  width: 70px;
-  height: 70px;
-  background: radial-gradient(circle, #ff9800, red);
-  border-radius: 50%;
+.hotspot-annotation {
+  background: rgba(0,0,0,0.8);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
   position: absolute;
-  transition: opacity 0.8s ease;
+  transform: translate(-50%, -140%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+  white-space: nowrap;
 }
 
-.robot {
-  position: absolute;
-  font-size: 46px;
-  transition: top 1.2s linear, left 1.2s linear;
+.hotspot:hover .hotspot-annotation {
+  opacity: 1;
 }
 
-.simulation-panel {
-  padding: 24px;
-  background: var(--panel);
-  border-left: 1px solid #1f2630;
-}
-
-.battery-warning {
-  color: #ff4d4d;
-  margin-top: 12px;
-}
-
-.hidden {
-  display: none;
-}
-
+/* Components Responsive */
 @media (max-width: 900px) {
-  .simulation-container {
+  .components-layout {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr auto;
+    grid-template-rows: auto 1fr;
+    height: auto;
+    min-height: 100vh;
   }
 
-  .simulation-panel {
-    border-left: none;
-    border-top: 1px solid #1f2630;
+  .info-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 40vh;
   }
+  
+  .viewer-panel {
+    height: 60vh;
+  }
+}
+
+/* ================= SIMULATION LAYOUT ================= */
+/* ================= SIMULATION LAYOUT ================= */
+/* LAYOUT */
+.simulation-layout { display: grid; grid-template-columns: 1fr 340px; height: calc(100vh - 64px); }
+
+/* VIEWPORT */
+.sim-viewport {
+  background: #0f1218; position: relative; overflow: hidden;
+  display: flex; justify-content: center; align-items: center;
+}
+
+/* MAP CONTAINER */
+#svgContainer {
+  position: relative; width: 800px; height: 600px;
+  background: #111; box-shadow: 0 0 50px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+
+#svgContainer svg { width: 100%; height: 100%; display: block; position: absolute; top:0; left:0; z-index: 0; }
+.obstacle { fill: #2d3542; stroke: #3e4756; stroke-width: 2; }
+
+/* ENTITIES */
+.entity {
+  position: absolute; width: 40px; height: 40px;
+  display: flex; justify-content: center; align-items: center;
+  z-index: 10;
+  transition: transform 0.05s linear; /* Very fast smooth updates */
+  margin-left: -20px; margin-top: -20px; /* Center Anchor */
+  pointer-events: none;
+}
+
+/* ROBOT SENSOR */
+.robot .sensor-ring {
+  position: absolute; width: 100%; height: 100%;
+  border: 1px dashed rgba(33, 150, 243, 0.5);
+  border-radius: 50%;
+  animation: spin 4s linear infinite;
+  transform: scale(2.0);
+}
+@keyframes spin { 100% { transform: scale(2.0) rotate(360deg); } }
+
+/* FIRE */
+.fire {
+  z-index: 5; opacity: 0; transition: opacity 0.5s;
+  font-size: 28px; filter: drop-shadow(0 0 8px #ff4444);
+}
+
+/* BEAM */
+.beam {
+  position: absolute; height: 6px; background: #2196f3;
+  transform-origin: 0 50%; z-index: 9; opacity: 0;
+  box-shadow: 0 0 15px #2196f3; border-radius: 4px;
+  transition: opacity 0.2s; pointer-events: none;
+}
+
+/* CONTROLS */
+.sim-controls {
+  background: var(--panel); border-left: 1px solid var(--border);
+  padding: 24px; display: flex; flex-direction: column; gap: 24px;
+  overflow-y: auto; z-index: 20;
+}
+
+.control-group h3 {
+  color: var(--muted); font-size: 0.75rem; text-transform: uppercase;
+  margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;
+}
+
+.control-group.fill-height { flex: 1; display: flex; flex-direction: column; min-height: 200px; }
+
+/* STATE BADGES */
+.state-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.state-badge {
+  background: #0b0f14; border: 1px solid var(--border); border-radius: 6px;
+  padding: 10px; font-size: 0.7rem; text-align: center; color: #555;
+  transition: all 0.3s ease; font-weight: 600;
+}
+
+.state-badge.active#st-patrol { background: rgba(0, 230, 118, 0.15); color: var(--green); border-color: var(--green); box-shadow: 0 0 10px rgba(0, 230, 118, 0.2); }
+.state-badge.active#st-detect { background: rgba(255, 68, 68, 0.15); color: var(--red); border-color: var(--red); box-shadow: 0 0 10px rgba(255, 68, 68, 0.2); animation: pulseRed 0.5s infinite; }
+.state-badge.active#st-approach { background: rgba(255, 152, 0, 0.15); color: var(--accent); border-color: var(--accent); box-shadow: 0 0 10px rgba(255, 152, 0, 0.2); }
+.state-badge.active#st-extinguish { background: rgba(33, 150, 243, 0.15); color: var(--blue); border-color: var(--blue); box-shadow: 0 0 10px rgba(33, 150, 243, 0.2); }
+
+@keyframes pulseRed { 0% { opacity: 0.6; } 100% { opacity: 1; } }
+
+/* BUTTONS */
+.dropdown { width: 100%; padding: 12px; background: #0b0f14; border: 1px solid var(--border); color: #fff; border-radius: 6px; outline: none; cursor: pointer; }
+.btn { width: 100%; padding: 12px; margin-bottom: 10px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+.btn:hover { opacity: 0.9; }
+.primary { background: var(--accent); color: #000; }
+.secondary { background: #2c3542; color: #fff; }
+
+/* CONSOLE */
+.console-box {
+  background: var(--console-bg); padding: 12px; border-radius: 6px;
+  flex: 1; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #888; border: 1px solid var(--border);
+}
+.console-box p { margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #1a1f26; }
+.sys { color: #2196f3; } .err { color: #ff4444; } .path { color: #00e676; }
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  body { overflow: auto; }
+  .simulation-layout { grid-template-columns: 1fr; grid-template-rows: 50vh auto; height: auto; }
+  .sim-controls { border-left: none; border-top: 1px solid var(--border); padding-bottom: 50px; }
+  #svgContainer { transform: scale(0.6); transform-origin: center; }
 }

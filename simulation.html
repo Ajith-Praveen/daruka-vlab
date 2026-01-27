@@ -3,53 +3,72 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Firefighting Simulation | DARUKA VLab</title>
-
+  <title>FireBot Sim | DARUKA</title>
   <link rel="stylesheet" href="css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
 </head>
-
 <body>
 
 <header class="top-bar">
-  <h2>Firefighting Simulation</h2>
+  <h2>Robot Working Simulation</h2>
   <a href="index.html" class="back-link">⬅ Back to Lab</a>
 </header>
 
-<div class="simulation-container">
-
-  <!-- VISUAL MAP -->
-  <div class="simulation-visual">
-    <div id="map" class="map kitchen">
-      <div id="fire" class="fire"></div>
-      <div id="robot" class="robot">🤖</div>
+<div class="simulation-layout">
+  
+  <div class="sim-viewport">
+    
+    <div id="svgContainer">
+      <div id="robot" class="entity robot">
+        <div class="sensor-ring"></div>
+        <span style="position:relative; z-index:2; font-size:24px;">🤖</span>
+      </div>
+      
+      <div id="fire" class="entity fire">🔥</div>
+      
+      <div id="beam" class="beam"></div>
     </div>
+
   </div>
 
-  <!-- CONTROL PANEL -->
-  <div class="simulation-panel">
+  <aside class="sim-controls">
+    
+    <div class="control-group">
+      <h3>Robot State</h3>
+      <div class="state-grid">
+        <div id="st-patrol" class="state-badge active">PATROLLING</div>
+        <div id="st-detect" class="state-badge">DETECTED</div>
+        <div id="st-approach" class="state-badge">APPROACHING</div>
+        <div id="st-extinguish" class="state-badge">EXTINGUISHING</div>
+      </div>
+    </div>
 
-    <label>
-      Scenario:
-      <select id="scenario">
+    <div class="control-group">
+      <h3>Environment</h3>
+      <select id="mapSelect" class="dropdown">
         <option value="kitchen">Kitchen</option>
-        <option value="lab">Laboratory</option>
-        <option value="room">Room</option>
+        <option value="livingroom">Living Room</option>
+        <option value="office">Office</option>
       </select>
-    </label>
-
-    <button onclick="startSimulation()">▶ Start Simulation</button>
-
-    <p><b>State:</b> <span id="state">IDLE</span></p>
-    <p><b>Battery:</b> <span id="battery">100%</span></p>
-
-    <div id="battery-warning" class="battery-warning hidden">
-      ⚠ Battery low! Please charge the robot.
     </div>
 
-  </div>
+    <div class="control-group">
+      <button id="startBtn" class="btn primary">▶ Start Simulation</button>
+      <button id="stopBtn" class="btn secondary">⏹ Stop / Reset</button>
+    </div>
+
+    <div class="control-group fill-height">
+      <h3>System Logs</h3>
+      <div id="console" class="console-box">
+        <p class="sys">> System Ready.</p>
+      </div>
+    </div>
+  </aside>
 
 </div>
 
+<script src="maps/map_data.js"></script>
 <script src="js/simulation.js"></script>
+
 </body>
 </html>
