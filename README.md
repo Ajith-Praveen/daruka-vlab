@@ -40,7 +40,7 @@ The Virtual Lab mirrors this architecture in software.
 
 ## 🌐 Live Virtual Lab
 👉 **Deployed Link:**  
-https://Ajith-Praveen.github.io/daruka-vlab/
+https://daruka-vlab.vercel.app/
 
 ---
 
