@@ -111,36 +111,49 @@ function parseObstacles() {
   console.log(`Parsed ${sys.obstacles.length} obstacles.`);
 }
 
-/* ================= MOVEMENT & PHYSICS ================= */
-function getFreePoint() {
-  let p = {x:0, y:0}, valid = false, tries = 0;
-  
-  // Try 500 times to find a safe spot
-  while(!valid && tries < 500) {
-    p.x = Math.random() * (800 - 60) + 30;
-    p.y = Math.random() * (600 - 60) + 30;
-    
-    if (!checkCollision(p.x, p.y)) valid = true;
-    tries++;
-  }
-  
-  if (!valid) return {x: 50, y: 50}; // Safe fallback
-  return p;
+function getBounds() {
+  return {
+    w: ui.svg.clientWidth,
+    h: ui.svg.clientHeight
+  };
 }
 
+
+/* ================= MOVEMENT & PHYSICS ================= */
+function getFreePoint() {
+  const { w, h } = getBounds();
+
+  let p = { x: 0, y: 0 };
+  let tries = 0;
+
+  while (tries < 500) {
+    p.x = Math.random() * (w - 60) + 30;
+    p.y = Math.random() * (h - 60) + 30;
+
+    if (!checkCollision(p.x, p.y)) {
+      return p; // valid safe point
+    }
+    tries++;
+  }
+
+  // Fallback: center of map
+  return { x: w / 2, y: h / 2 };
+}
+
+
 function checkCollision(x, y) {
-  // Get the actual width/height from the container rather than hardcoded 800/600
-  const bounds = ui.svg.getBoundingClientRect();
-  
-  // 1. Map Boundaries (Hardcoded to your 800x600 coordinate system)
-  if (x < 30 || x > 770 || y < 30 || y > 570) return true;
-  
-  // 2. Obstacles
-  return sys.obstacles.some(o => 
+  const { w, h } = getBounds();
+
+  // Map boundaries
+  if (x < 30 || y < 30 || x > w - 30 || y > h - 30) return true;
+
+  // Obstacles
+  return sys.obstacles.some(o =>
     x > o.x && x < o.x + o.w &&
     y > o.y && y < o.y + o.h
   );
 }
+
 
 function moveRobot() {
   if (!sys.target) return;
