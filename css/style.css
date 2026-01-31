@@ -388,5 +388,17 @@ h1 {
   body { overflow: auto; }
   .simulation-layout { grid-template-columns: 1fr; grid-template-rows: 50vh auto; height: auto; }
   .sim-controls { border-left: none; border-top: 1px solid var(--border); padding-bottom: 50px; }
-  #svgContainer { transform: scale(0.6); transform-origin: center; }
+  #svgContainer {
+    /* Remove transform: scale(0.6) and transform-origin */
+    width: 100%;       /* Make it fluid */
+    height: auto;      /* Keep aspect ratio */
+    aspect-ratio: 4 / 3; /* Matches 800/600 */
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .sim-viewport {
+    display: block;    /* Allows the container to scroll or stack better */
+    padding: 20px;
+    overflow-x: auto;  /* Allows swiping if it's still too big */
+  }
 }

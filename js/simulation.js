@@ -129,7 +129,10 @@ function getFreePoint() {
 }
 
 function checkCollision(x, y) {
-  // 1. Map Boundaries
+  // Get the actual width/height from the container rather than hardcoded 800/600
+  const bounds = ui.svg.getBoundingClientRect();
+  
+  // 1. Map Boundaries (Hardcoded to your 800x600 coordinate system)
   if (x < 30 || x > 770 || y < 30 || y > 570) return true;
   
   // 2. Obstacles
