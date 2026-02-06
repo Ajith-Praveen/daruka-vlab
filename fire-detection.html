@@ -10,10 +10,10 @@
 <body>
 
 <header class="top-bar">
-  <a href="experiments.html" class="back-link">⬅ Experiments</a>
+  <a href="experiments.html" class="back-link">Experiments</a>
   <h2>Experiment 1 — Fire Detection</h2>
   <nav class="top-bar-nav">
-    <a href="navigation.html">Exp 2: Navigation →</a>
+    <a href="navigation.html">Experiment 2 →</a>
   </nav>
 </header>
 
@@ -31,7 +31,7 @@
       </div>
       
       <div class="fd-live-badge" id="liveBadge">● LIVE</div>
-      <div class="fd-yolo-tag" id="yoloTag">YOLOv8 · fire-detect</div>
+      <div class="fd-yolo-tag" id="yoloTag">YOLOv8 · fire-detection</div>
       
       <div id="simBanner" style="display:none; position:absolute; bottom:10px; left:10px; right:10px; background:rgba(255,152,0,0.9); color:white; padding:8px 12px; border-radius:6px; font-size:0.85rem; font-weight:500; z-index:10;">
         ⚠️ Backend Offline — Switched to <strong>Simulation Mode</strong>
@@ -98,7 +98,7 @@
 /* --- CONFIGURATION --- */
 const BACKEND = 'https://daruka-be.onrender.com';
 let threshold = 0.40;
-let pollRate = 20000; // 1 second
+let pollRate = 10000; // 1 second
 
 /* --- STATE --- */
 let camStream = null;
