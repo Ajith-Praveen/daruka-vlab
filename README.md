@@ -1,4 +1,4 @@
-# DARUKA-VLab 🔥🤖
+# DARUKA-VLab
 
 DARUKA-VLab is a software-based Virtual Laboratory designed to demonstrate
 the architecture, working principles, and autonomous behavior of a
@@ -9,7 +9,7 @@ emphasizing software simulation with optional hardware validation.
 
 ---
 
-## 🎯 Objectives
+## Objectives
 - To provide an interactive Virtual Lab for understanding autonomous firefighting robots
 - To visualize robot components using a 3D web-based model
 - To simulate fire detection and extinguishing behavior in software
@@ -17,7 +17,7 @@ emphasizing software simulation with optional hardware validation.
 
 ---
 
-## 🧪 Virtual Lab Features
+## Virtual Lab Features
 - Interactive 3D robot model (GLB format)
 - Click-to-explore robot components
 - Software-based firefighting simulation
@@ -26,7 +26,7 @@ emphasizing software simulation with optional hardware validation.
 
 ---
 
-## 🤖 System Overview
+## System Overview
 The robot consists of:
 - Wheeled locomotion system
 - Vision-based fire detection (YOLO)
@@ -38,13 +38,13 @@ The Virtual Lab mirrors this architecture in software.
 
 ---
 
-## 🌐 Live Virtual Lab
+## Live Virtual Lab
 👉 **Deployed Link:**  
 https://daruka-vlab.vercel.app/
 
 ---
 
-## 🛠️ Technologies Used
+## Technologies Used
 - HTML, CSS, JavaScript
 - `<model-viewer>` for 3D visualization
 - GLB (glTF) 3D model
@@ -52,7 +52,7 @@ https://daruka-vlab.vercel.app/
 
 ---
 
-## 🚀 How to Run Locally
+## How to Run Locally
 1. Clone the repository:
 ```bash
 git clone https://github.com/yourusername/daruka-vlab.git
