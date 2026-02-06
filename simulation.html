@@ -1,45 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FireBot Sim | DARUKA</title>
+  <title>Experiment 3: FSM Simulation | DARUKA VLab</title>
   <link rel="stylesheet" href="css/style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
 
 <header class="top-bar">
-  <h2>Robot Working Simulation</h2>
-  <a href="index.html" class="back-link">⬅ Back to Lab</a>
+  <a href="experiments.html" class="back-link">⬅ Experiments</a>
+  <h2>Experiment 3 — Full FSM Simulation</h2>
+  <nav class="top-bar-nav">
+    <a href="navigation.html">← Exp 2</a>
+    <a href="quiz.html">Quiz →</a>
+  </nav>
 </header>
 
 <div class="simulation-layout">
-  
+
   <div class="sim-viewport">
-    
     <div id="svgContainer">
       <div id="robot" class="entity robot">
         <div class="sensor-ring"></div>
         <span style="position:relative; z-index:2; font-size:24px;">🤖</span>
       </div>
-      
       <div id="fire" class="entity fire">🔥</div>
-      
       <div id="beam" class="beam"></div>
+      <div id="crosshair" class="aim-crosshair"></div>
     </div>
-
   </div>
 
   <aside class="sim-controls">
-    
+
     <div class="control-group">
-      <h3>Robot State</h3>
+      <h3>FSM State Machine</h3>
       <div class="state-grid">
-        <div id="st-patrol" class="state-badge active">PATROLLING</div>
-        <div id="st-detect" class="state-badge">DETECTED</div>
-        <div id="st-approach" class="state-badge">APPROACHING</div>
-        <div id="st-extinguish" class="state-badge">EXTINGUISHING</div>
+        <div class="state-badge sb-idle" id="sb-idle">IDLE</div>
+        <div class="state-badge sb-detect" id="sb-detect">DETECT</div>
+        <div class="state-badge sb-nav" id="sb-nav">NAVIGATE</div>
+        <div class="state-badge sb-aim" id="sb-aim">AIM</div>
+        <div class="state-badge sb-ext" id="sb-ext">EXTINGUISH</div>
+        <div class="state-badge sb-verify" id="sb-verify">VERIFY</div>
+        <div class="state-badge sb-done" id="sb-done" style="grid-column: span 3;">COMPLETE</div>
       </div>
     </div>
 
@@ -53,22 +57,252 @@
     </div>
 
     <div class="control-group">
-      <button id="startBtn" class="btn primary">▶ Start Simulation</button>
+      <button id="startBtn" class="btn primary">▶ Start FSM Mission</button>
       <button id="stopBtn" class="btn secondary">⏹ Stop / Reset</button>
     </div>
 
     <div class="control-group fill-height">
       <h3>System Logs</h3>
       <div id="console" class="console-box">
-        <p class="sys">> System Ready.</p>
+        <p class="sys">[SYS] FSM simulation module loaded</p>
+        <p class="sys">[SYS] 7 states: IDLE → DETECT → NAVIGATE → AIM → EXTINGUISH → VERIFY → COMPLETE</p>
       </div>
     </div>
-  </aside>
 
+  </aside>
 </div>
 
 <script src="maps/map_data.js"></script>
-<script src="js/simulation.js"></script>
+<script>
+/* ===== CONFIG ===== */
+const CFG = {
+  robotSpeed: 3,
+  stopDistance: 60,
+  obsPadding: 20,
+};
+
+/* ===== STATE ===== */
+const sys = {
+  running: false,
+  fsmState: 'IDLE',
+  robot: { x: 50, y: 50 },
+  target: null,
+  fire: null,
+  obstacles: [],
+  animID: null,
+  fsmTimer: null
+};
+
+/* ===== UI ===== */
+const ui = {
+  svg: document.getElementById('svgContainer'),
+  robot: document.getElementById('robot'),
+  fire: document.getElementById('fire'),
+  beam: document.getElementById('beam'),
+  crosshair: document.getElementById('crosshair'),
+  console: document.getElementById('console'),
+  mapSelect: document.getElementById('mapSelect')
+};
+
+const FSM_STATES = ['idle','detect','nav','aim','ext','verify','done'];
+
+function log(msg, cls = '') {
+  const p = document.createElement('p');
+  p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  if (cls) p.className = cls;
+  ui.console.prepend(p);
+}
+
+function setFSM(state) {
+  sys.fsmState = state;
+  FSM_STATES.forEach(s => {
+    const el = document.getElementById('sb-' + s);
+    if (el) el.classList.remove('active');
+  });
+  const key = { IDLE:'idle', DETECT:'detect', NAVIGATE:'nav', AIM:'aim', EXTINGUISH:'ext', VERIFY:'verify', COMPLETE:'done' }[state];
+  if (key) document.getElementById('sb-' + key)?.classList.add('active');
+  log(`FSM → ${state}`, 'info');
+}
+
+/* ===== MAP ===== */
+function loadMap(name) {
+  stopSim();
+  if (!MAP_DATA[name]) return;
+  ui.svg.innerHTML = MAP_DATA[name];
+  ui.svg.innerHTML += `
+    <div id="robot" class="entity robot"><div class="sensor-ring"></div><span style="position:relative;z-index:2;font-size:24px;">🤖</span></div>
+    <div id="fire" class="entity fire">🔥</div>
+    <div id="beam" class="beam"></div>
+    <div id="crosshair" class="aim-crosshair"></div>`;
+  ui.robot = document.getElementById('robot');
+  ui.fire = document.getElementById('fire');
+  ui.beam = document.getElementById('beam');
+  ui.crosshair = document.getElementById('crosshair');
+  log(`Map loaded: ${name.toUpperCase()}`, 'sys');
+  setTimeout(() => { parseObstacles(); sys.robot = getFreePoint(); renderRobot(); }, 100);
+}
+
+function parseObstacles() {
+  sys.obstacles = [];
+  ui.svg.querySelectorAll('.obstacle').forEach(el => {
+    const r = el.getBBox();
+    sys.obstacles.push({ x: r.x - CFG.obsPadding, y: r.y - CFG.obsPadding, w: r.width + CFG.obsPadding * 2, h: r.height + CFG.obsPadding * 2 });
+  });
+}
+
+function getBounds() { return { w: ui.svg.clientWidth, h: ui.svg.clientHeight }; }
+
+function getFreePoint() {
+  const { w, h } = getBounds();
+  for (let i = 0; i < 500; i++) {
+    const p = { x: Math.random() * (w - 60) + 30, y: Math.random() * (h - 60) + 30 };
+    if (!checkCollision(p.x, p.y)) return p;
+  }
+  return { x: w / 2, y: h / 2 };
+}
+
+function checkCollision(x, y) {
+  const { w, h } = getBounds();
+  if (x < 30 || y < 30 || x > w - 30 || y > h - 30) return true;
+  return sys.obstacles.some(o => x > o.x && x < o.x + o.w && y > o.y && y < o.y + o.h);
+}
+
+function renderRobot() { ui.robot.style.transform = `translate(${sys.robot.x}px, ${sys.robot.y}px)`; }
+
+function moveRobot() {
+  if (!sys.target) return false;
+  const dx = sys.target.x - sys.robot.x;
+  const dy = sys.target.y - sys.robot.y;
+  const dist = Math.hypot(dx, dy);
+  if (dist <= CFG.stopDistance) return true; // arrived
+
+  const mx = (dx / dist) * CFG.robotSpeed;
+  const my = (dy / dist) * CFG.robotSpeed;
+  const nx = sys.robot.x + mx, ny = sys.robot.y + my;
+
+  if (!checkCollision(nx, ny)) { sys.robot.x = nx; sys.robot.y = ny; }
+  else if (!checkCollision(nx, sys.robot.y)) { sys.robot.x = nx; }
+  else if (!checkCollision(sys.robot.x, ny)) { sys.robot.y = ny; }
+  else { sys.target = getFreePoint(); } // unstick
+
+  renderRobot();
+  return false;
+}
+
+/* ===== FSM MISSION ===== */
+function startSim() {
+  if (sys.running) return;
+  sys.running = true;
+  setFSM('IDLE');
+  log('Mission started — initializing FSM...', 'path');
+
+  // IDLE → DETECT after 2s
+  sys.fsmTimer = setTimeout(() => {
+    if (!sys.running) return;
+    setFSM('DETECT');
+    log('Scanning for fire...', 'sys');
+
+    // Spawn fire, then DETECT → NAVIGATE after 2.5s
+    const fp = getFreePoint();
+    if (Math.hypot(fp.x - sys.robot.x, fp.y - sys.robot.y) < 150) { fp.x = (fp.x + 200) % (getBounds().w - 60); }
+    sys.fire = fp;
+    ui.fire.style.transform = `translate(${fp.x}px, ${fp.y}px)`;
+    ui.fire.style.opacity = 1;
+    log(`Fire detected at [${Math.round(fp.x)}, ${Math.round(fp.y)}]`, 'err');
+
+    sys.fsmTimer = setTimeout(() => {
+      if (!sys.running) return;
+      setFSM('NAVIGATE');
+      sys.target = sys.fire;
+      log('Navigating to fire target...', 'sys');
+      loop();
+    }, 2500);
+  }, 2000);
+}
+
+function stopSim() {
+  sys.running = false;
+  cancelAnimationFrame(sys.animID);
+  clearTimeout(sys.fsmTimer);
+  sys.target = null;
+  sys.fire = null;
+  if (ui.fire) ui.fire.style.opacity = 0;
+  if (ui.beam) ui.beam.style.opacity = 0;
+  if (ui.crosshair) ui.crosshair.style.opacity = 0;
+  setFSM('IDLE');
+  log('Mission stopped / reset', 'warn');
+  setTimeout(() => { sys.robot = getFreePoint(); renderRobot(); }, 50);
+}
+
+function loop() {
+  if (!sys.running) return;
+
+  if (sys.fsmState === 'NAVIGATE') {
+    const arrived = moveRobot();
+    if (arrived) {
+      // → AIM
+      setFSM('AIM');
+      sys.target = null;
+      log('In range — aiming nozzle at fire...', 'sys');
+      // Show crosshair on fire
+      ui.crosshair.style.left = sys.fire.x + 'px';
+      ui.crosshair.style.top = sys.fire.y + 'px';
+      ui.crosshair.style.opacity = 1;
+
+      sys.fsmTimer = setTimeout(() => {
+        if (!sys.running) return;
+        // → EXTINGUISH
+        ui.crosshair.style.opacity = 0;
+        setFSM('EXTINGUISH');
+        log('Deploying CO₂ aerosol agent...', 'sys');
+
+        // Show beam
+        const dx = sys.fire.x - sys.robot.x;
+        const dy = sys.fire.y - sys.robot.y;
+        const dist = Math.hypot(dx, dy);
+        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+        ui.beam.style.width = dist + 'px';
+        ui.beam.style.top = sys.robot.y + 'px';
+        ui.beam.style.left = sys.robot.x + 'px';
+        ui.beam.style.transform = `rotate(${angle}deg)`;
+        ui.beam.style.opacity = 1;
+
+        sys.fsmTimer = setTimeout(() => {
+          if (!sys.running) return;
+          // → VERIFY
+          ui.beam.style.opacity = 0;
+          ui.fire.style.opacity = 0;
+          setFSM('VERIFY');
+          log('Verifying fire suppression...', 'sys');
+
+          sys.fsmTimer = setTimeout(() => {
+            if (!sys.running) return;
+            // → COMPLETE
+            setFSM('COMPLETE');
+            sys.fire = null;
+            log('✅ MISSION COMPLETE — fire successfully extinguished!', 'path');
+            log('All FSM states executed. Robot returning to idle.', 'sys');
+            sys.running = false;
+          }, 2000);
+        }, 2500);
+      }, 1800);
+      return; // Stop loop during AIM
+    }
+  }
+
+  if (sys.running && sys.fsmState === 'NAVIGATE') {
+    sys.animID = requestAnimationFrame(loop);
+  }
+}
+
+/* ===== INIT ===== */
+window.onload = () => {
+  document.getElementById('startBtn').onclick = startSim;
+  document.getElementById('stopBtn').onclick = stopSim;
+  ui.mapSelect.onchange = () => loadMap(ui.mapSelect.value);
+  loadMap('kitchen');
+};
+</script>
 
 </body>
 </html>

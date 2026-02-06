@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz | DARUKA VLab</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <div class="top-bar">
+    <a href="index.html" class="back-link">⬅ Home</a>
+    <h2>Assessment Quiz</h2>
+    <nav class="top-bar-nav">
+      <a href="experiments.html">Experiments</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="about.html">About</a>
+    </nav>
+  </div>
+
+  <div class="quiz-page">
+    <h1>Test Your Knowledge</h1>
+    <p class="subtitle">10 questions on fire detection, autonomous navigation, and robot system design.</p>
+
+    <div id="quizContainer"></div>
+
+    <button class="btn primary" id="submitQuiz" onclick="gradeQuiz()">Submit Answers</button>
+
+    <div class="quiz-score" id="scoreCard" style="display:none;">
+      <div class="score-num" id="scoreNum">0/10</div>
+      <p id="scoreMsg"></p>
+    </div>
+  </div>
+
+<script>
+const QUESTIONS = [
+  { q: "Which deep learning model is used for fire detection in the Daruka robot?", opts: ["ResNet-50","YOLOv8","VGG-16","BERT"], ans: 1, exp: "YOLOv8 is used for real-time fire detection due to its speed and accuracy in object detection tasks." },
+  { q: "What extinguishing agent does the robot use?", opts: ["Water mist","CO₂ gas","Aerosol agent","Foam spray"], ans: 2, exp: "An aerosol-based agent suppresses flames by interrupting combustion chemical reactions." },
+  { q: "How many states does the complete FSM have?", opts: ["4","5","6","7"], ans: 3, exp: "7 states: IDLE → DETECT → NAVIGATE → AIM → EXTINGUISH → VERIFY → COMPLETE." },
+  { q: "Which board serves as the main controller?", opts: ["Arduino Mega","ESP32","Raspberry Pi 5","Jetson Nano"], ans: 2, exp: "The Raspberry Pi 5 coordinates all sensing, decision-making, and actuation processes." },
+  { q: "What does 'Glass-Box AI' mean in this context?", opts: ["AI in a glass enclosure","Transparent/explainable AI internals","AI that processes glass images","A brand of AI chip"], ans: 1, exp: "Glass-Box AI means the model's internal workings (confidence scores, bounding boxes) are visible and explainable." },
+  { q: "The PCA9685 communicates via which protocol?", opts: ["SPI","UART","I²C","CAN bus"], ans: 2, exp: "The PCA9685 uses the I²C protocol for receiving commands and generating PWM signals." },
+  { q: "What is the purpose of the VERIFY state in the FSM?", opts: ["Verify battery level","Confirm fire is extinguished","Check motor calibration","Validate sensor readings"], ans: 1, exp: "VERIFY confirms that the fire has been successfully suppressed before transitioning to COMPLETE." },
+  { q: "Which motor driver module controls the DC drive motors?", opts: ["PCA9685","L298","TB6612","DRV8825"], ans: 1, exp: "The L298 H-bridge motor driver controls speed and direction of the DC drive motors." },
+  { q: "How many channels does the flame sensor array have?", opts: ["1","3","5","8"], ans: 2, exp: "The 5-channel IR flame sensor monitors fire intensity from different angles for directional estimation." },
+  { q: "Lowering the confidence threshold will:", opts: ["Miss more fires","Detect more regions (including false positives)","Speed up inference","Reduce power usage"], ans: 1, exp: "A lower threshold accepts weaker detections, increasing sensitivity but also potential false positives." }
+];
+
+const container = document.getElementById('quizContainer');
+const selected = {};
+
+QUESTIONS.forEach((q, i) => {
+  const card = document.createElement('div');
+  card.className = 'quiz-card';
+  card.id = 'q' + i;
+  card.innerHTML = `<div class="q-num">Question ${i + 1} of ${QUESTIONS.length}</div><div class="q-text">${q.q}</div><div class="quiz-options" id="opts${i}"></div><div class="quiz-feedback" id="fb${i}"></div>`;
+  container.appendChild(card);
+
+  const optsEl = document.getElementById('opts' + i);
+  q.opts.forEach((opt, j) => {
+    const btn = document.createElement('div');
+    btn.className = 'quiz-opt';
+    btn.textContent = opt;
+    btn.onclick = () => {
+      document.querySelectorAll(`#opts${i} .quiz-opt`).forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selected[i] = j;
+    };
+    optsEl.appendChild(btn);
+  });
+});
+
+function gradeQuiz() {
+  let score = 0;
+  QUESTIONS.forEach((q, i) => {
+    const opts = document.querySelectorAll(`#opts${i} .quiz-opt`);
+    const fb = document.getElementById('fb' + i);
+    opts.forEach((o, j) => {
+      o.classList.add('disabled');
+      if (j === q.ans) o.classList.add('correct');
+      if (selected[i] === j && j !== q.ans) o.classList.add('wrong');
+    });
+    if (selected[i] === q.ans) {
+      score++;
+      fb.className = 'quiz-feedback show correct-fb';
+      fb.textContent = '✓ Correct! ' + q.exp;
+    } else {
+      fb.className = 'quiz-feedback show wrong-fb';
+      fb.textContent = '✗ Incorrect. ' + q.exp;
+    }
+  });
+
+  const pct = Math.round((score / QUESTIONS.length) * 100);
+  document.getElementById('scoreNum').textContent = `${score}/${QUESTIONS.length}`;
+  const msgs = ['Keep studying the experiments!','Good effort — review the architecture page.','Well done!','Excellent mastery!'];
+  document.getElementById('scoreMsg').textContent = msgs[Math.min(3, Math.floor(pct / 30))] + ` (${pct}%)`;
+  document.getElementById('scoreCard').style.display = 'block';
+  document.getElementById('submitQuiz').style.display = 'none';
+  document.getElementById('scoreCard').scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+
+</body>
+</html>

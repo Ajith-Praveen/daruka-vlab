@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Experiment 1: Fire Detection | DARUKA VLab</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="top-bar">
+  <a href="experiments.html" class="back-link">⬅ Experiments</a>
+  <h2>Experiment 1 — Fire Detection</h2>
+  <nav class="top-bar-nav">
+    <a href="navigation.html">Exp 2: Navigation →</a>
+  </nav>
+</header>
+
+<div class="fd-layout">
+
+  <div class="fd-main">
+    <div class="fd-video-wrap" id="videoWrap">
+      <video id="camVideo" autoplay playsinline muted></video>
+      <canvas id="overlayCanvas"></canvas>
+      
+      <div class="fd-placeholder" id="camPlaceholder">
+        <span class="fd-cam-icon">📷</span>
+        <p>Camera feed will appear here</p>
+        <small>Click <strong>Start Camera</strong> to begin detection</small>
+      </div>
+      
+      <div class="fd-live-badge" id="liveBadge">● LIVE</div>
+      <div class="fd-yolo-tag" id="yoloTag">YOLOv8 · fire-detect</div>
+      
+      <div id="simBanner" style="display:none; position:absolute; bottom:10px; left:10px; right:10px; background:rgba(255,152,0,0.9); color:white; padding:8px 12px; border-radius:6px; font-size:0.85rem; font-weight:500; z-index:10;">
+        ⚠️ Backend Offline — Switched to <strong>Simulation Mode</strong>
+      </div>
+    </div>
+  </div>
+
+  <aside class="fd-sidebar">
+
+    <div class="control-group">
+      <h3>Camera Controls</h3>
+      <div class="fd-btn-row">
+        <button class="btn btn-start-cam" id="btnStart" onclick="startCamera()">▶ Start Camera</button>
+        <button class="btn btn-stop-cam" id="btnStop" onclick="stopCamera()" disabled>■ Stop</button>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <h3>Detection Threshold</h3>
+      <div class="param-row">
+        <label>Confidence</label>
+        <input type="range" id="thresholdSlider" min="10" max="95" value="40" oninput="updateThreshold(this.value)">
+        <span class="param-val" id="thresholdVal">0.40</span>
+      </div>
+      <div class="param-row">
+        <label>Poll Rate</label>
+        <input type="range" id="pollSlider" min="500" max="5000" value="1000" step="250" oninput="updatePoll(this.value)">
+        <span class="param-val" id="pollVal">1.0s</span>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <h3>Live Detection Stats</h3>
+      <div class="fd-stats">
+        <div class="fd-stat"><div class="fs-label">Status</div><div class="fs-value" id="statStatus">IDLE</div></div>
+        <div class="fd-stat fire-on"><div class="fs-label">Fire</div><div class="fs-value" id="statFire">—</div></div>
+        <div class="fd-stat"><div class="fs-label">Confidence</div><div class="fs-value" id="statConf">—</div></div>
+        <div class="fd-stat"><div class="fs-label">Detections</div><div class="fs-value" id="statCount">0</div></div>
+        <div class="fd-stat"><div class="fs-label">Mode</div><div class="fs-value" id="statMode">CLOUD</div></div>
+        <div class="fd-stat"><div class="fs-label">Latency</div><div class="fs-value" id="statLatency">—</div></div>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <h3>Glass-Box AI</h3>
+      <div class="fd-glass-box">
+        <h4>What's Happening?</h4>
+        <p id="glassBoxText">The YOLOv8 model receives your camera frames, processes them through a convolutional neural network, and returns bounding boxes with confidence scores for detected fire regions.</p>
+      </div>
+    </div>
+
+    <div class="control-group fill-height">
+      <h3>Detection Log</h3>
+      <div class="console-box" id="logBox">
+        <p class="sys">[SYS] Fire detection module ready</p>
+        <p class="sys">[SYS] Backend: aj0726-daruka-vlab-backend.hf.space</p>
+      </div>
+    </div>
+
+  </aside>
+</div>
+
+<script>
+/* --- CONFIGURATION --- */
+const BACKEND = 'https://daruka-be.onrender.com';
+let threshold = 0.40;
+let pollRate = 20000; // 1 second
+
+/* --- STATE --- */
+let camStream = null;
+let pollInterval = null;
+let detectionCount = 0;
+let isSimMode = false; // Starts false, switches true on error
+
+/* --- ELEMENTS --- */
+const video = document.getElementById('camVideo');
+const canvas = document.getElementById('overlayCanvas');
+const ctx = canvas.getContext('2d');
+
+// --- Log utility ---
+function log(msg, cls = '') {
+  const box = document.getElementById('logBox');
+  const p = document.createElement('p');
+  if (cls) p.className = cls;
+  p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  box.prepend(p);
+}
+
+// --- UI Updates ---
+function updateThreshold(val) {
+  threshold = val / 100;
+  document.getElementById('thresholdVal').textContent = threshold.toFixed(2);
+}
+
+function updatePoll(val) {
+  pollRate = parseInt(val);
+  document.getElementById('pollVal').textContent = (pollRate / 1000).toFixed(1) + 's';
+  if (pollInterval) {
+    clearInterval(pollInterval);
+    pollInterval = setInterval(sendFrame, pollRate);
+  }
+}
+
+// --- Camera Logic ---
+async function startCamera() {
+  try {
+    // Standard constraints
+    const constraints = { video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } } };
+    camStream = await navigator.mediaDevices.getUserMedia(constraints);
+    
+    video.srcObject = camStream;
+    video.onloadedmetadata = () => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+    };
+
+    // UI Updates
+    document.getElementById('camPlaceholder').style.display = 'none';
+    document.getElementById('liveBadge').style.display = 'block';
+    document.getElementById('yoloTag').style.display = 'block';
+    document.getElementById('btnStart').disabled = true;
+    document.getElementById('btnStop').disabled = false;
+    document.getElementById('statStatus').textContent = 'SCANNING';
+    document.getElementById('statStatus').style.color = '#00e676';
+    
+    // Reset State
+    isSimMode = false;
+    document.getElementById('simBanner').style.display = 'none';
+    document.getElementById('statMode').textContent = 'CLOUD';
+
+    log('Camera active. Starting detection loop...', 'sys');
+    pollInterval = setInterval(sendFrame, pollRate);
+
+  } catch (err) {
+    console.warn("Camera Error:", err); // Warn only
+    log('Camera access denied. Check permissions.', 'err');
+    document.getElementById('statStatus').textContent = 'ERROR';
+  }
+}
+
+function stopCamera() {
+  if (camStream) {
+    camStream.getTracks().forEach(t => t.stop());
+    camStream = null;
+  }
+  clearInterval(pollInterval);
+  video.srcObject = null;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // Reset UI
+  document.getElementById('camPlaceholder').style.display = 'flex';
+  document.getElementById('liveBadge').style.display = 'none';
+  document.getElementById('yoloTag').style.display = 'none';
+  document.getElementById('btnStart').disabled = false;
+  document.getElementById('btnStop').disabled = true;
+  document.getElementById('statStatus').textContent = 'IDLE';
+  document.getElementById('statStatus').style.color = '#ff9800';
+  document.getElementById('statFire').textContent = '—';
+  document.getElementById('statFire').style.color = '#fff';
+  
+  log('Session stopped.', 'warn');
+}
+
+// --- Detection Loop ---
+async function sendFrame() {
+  if (!camStream || video.readyState < 2) return;
+
+  // 1. If we are already in Sim Mode, just run sim
+  if (isSimMode) {
+    runSimulation();
+    return;
+  }
+
+  // 2. Prepare Frame
+  const tmpC = document.createElement('canvas');
+  tmpC.width = video.videoWidth;
+  tmpC.height = video.videoHeight;
+  tmpC.getContext('2d').drawImage(video, 0, 0);
+
+  // 3. Try Backend
+  try {
+    const blob = await new Promise(r => tmpC.toBlob(r, 'image/jpeg', 0.6));
+    const fd = new FormData();
+    fd.append('image', blob, 'frame.jpg');
+
+    const start = performance.now();
+    
+    // Fetch with 1.5s timeout so we don't hang
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1500);
+
+    const res = await fetch(BACKEND + '/detect', { 
+      method: 'POST', 
+      body: fd,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) throw new Error(res.status);
+
+    const data = await res.json();
+    document.getElementById('statLatency').textContent = Math.round(performance.now() - start) + 'ms';
+    
+    processDetections(data);
+
+  } catch (e) {
+    // 4. ON FAILURE: Switch to Sim Mode instantly & silently
+    activateSimMode();
+  }
+}
+
+function activateSimMode() {
+  isSimMode = true;
+  document.getElementById('statMode').textContent = 'SIM';
+  document.getElementById('statMode').style.color = '#ff9800';
+  document.getElementById('simBanner').style.display = 'block';
+  document.getElementById('glassBoxText').textContent = "⚠️ CONNECTION LOST. Switched to Demo Mode (Simulation). Detections are generated locally.";
+  log('Backend unavailable. Switched to Simulation Mode.', 'warn');
+  runSimulation();
+}
+
+function runSimulation() {
+  // Fake Latency
+  document.getElementById('statLatency').textContent = Math.floor(Math.random() * 30 + 20) + 'ms';
+
+  // 30% chance to "detect" fire
+  if (Math.random() > 0.7) {
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    // Create random box near center
+    const boxW = 120, boxH = 150;
+    const x = (w/2) - (boxW/2) + (Math.random()*40 - 20);
+    const y = (h/2) - (boxH/2) + (Math.random()*40 - 20);
+
+    processDetections([{
+      label: 'fire',
+      confidence: 0.85 + (Math.random() * 0.14),
+      bbox: [x, y, x+boxW, y+boxH]
+    }]);
+  } else {
+    processDetections([]);
+  }
+}
+
+// --- Draw Results ---
+function processDetections(list) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // Filter
+  const valid = list.filter(d => d.confidence >= threshold);
+
+  if (valid.length > 0) {
+    document.getElementById('statFire').textContent = 'DETECTED';
+    document.getElementById('statFire').style.color = '#ff4444';
+    document.getElementById('statStatus').textContent = 'ALERT';
+    document.getElementById('statStatus').style.color = '#ff4444';
+    document.getElementById('statCount').textContent = valid.length;
+    
+    const best = valid.reduce((p, c) => p.confidence > c.confidence ? p : c);
+    document.getElementById('statConf').textContent = (best.confidence * 100).toFixed(0) + '%';
+
+    valid.forEach(d => drawBox(d));
+  } else {
+    document.getElementById('statFire').textContent = 'CLEAR';
+    document.getElementById('statFire').style.color = '#00e676';
+    document.getElementById('statStatus').textContent = 'SCANNING';
+    document.getElementById('statStatus').style.color = '#00e676';
+    document.getElementById('statConf').textContent = '—';
+  }
+}
+
+function drawBox(d) {
+  let [x, y, x2, y2] = d.bbox || d.box; 
+  // Handle different bbox formats if needed
+  if (!x2) { x2 = x + 100; y2 = y + 100; } // Fallback
+
+  const w = x2 - x;
+  const h = y2 - y;
+  const label = `${d.label || 'fire'} ${(d.confidence*100).toFixed(0)}%`;
+
+  ctx.strokeStyle = '#ff4444';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(x, y, w, h);
+
+  ctx.fillStyle = '#ff4444';
+  const textW = ctx.measureText(label).width + 10;
+  ctx.fillRect(x, y - 24, textW, 24);
+
+  ctx.fillStyle = 'white';
+  ctx.font = 'bold 14px Inter, sans-serif';
+  ctx.fillText(label, x + 5, y - 7);
+}
+</script>
+
+</body>
+</html>

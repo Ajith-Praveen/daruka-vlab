@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Experiments | DARUKA VLab</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <div class="top-bar">
+    <a href="index.html" class="back-link">⬅ Home</a>
+    <h2>Experiments</h2>
+    <nav class="top-bar-nav">
+      <a href="components.html">3D Model</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="quiz.html">Quiz</a>
+    </nav>
+  </div>
+
+  <section class="experiments-page">
+    <h1>Virtual Lab Experiments</h1>
+    <p class="subtitle">
+      Three progressive experiments to understand each subsystem of the autonomous firefighting robot.
+    </p>
+
+    <div class="experiment-cards">
+
+      <div class="exp-card exp-card--fire">
+        
+        <span class="exp-tag exp-tag--fire">Perception</span>
+        <h2>Experiment 1: Fire Detection</h2>
+        <p>Use your webcam with a live YOLOv8 model to detect fire in real time. Adjust confidence thresholds and observe Glass-Box AI internals — bounding boxes, labels, and confidence scores.</p>
+        <a href="fire-detection.html" class="btn primary" style="text-align:center;">Launch Detection Lab →</a>
+      </div>
+
+      <div class="exp-card exp-card--nav">
+        
+        <span class="exp-tag exp-tag--nav">Navigation</span>
+        <h2>Experiment 2: Autonomous Navigation</h2>
+        <p>Watch the robot autonomously navigate through obstacle-filled environments to reach a fire target. Tune obstacle density, terrain difficulty, and robot speed parameters.</p>
+        <a href="navigation.html" class="btn primary" style="text-align:center;">Launch Navigation Lab →</a>
+      </div>
+
+      <div class="exp-card exp-card--full">
+        
+        <span class="exp-tag exp-tag--full">Full Mission</span>
+        <h2>Experiment 3: Complete FSM Simulation</h2>
+        <p>Experience the complete firefighting mission — from detection through navigation, aiming, extinguishing, and verification. A full 7-state finite state machine in action.</p>
+        <a href="simulation.html" class="btn primary" style="text-align:center;">Launch FSM Simulation →</a>
+      </div>
+
+    </div>
+  </section>
+
+</body>
+</html>

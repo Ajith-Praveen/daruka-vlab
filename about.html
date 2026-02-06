@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About | DARUKA VLab</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <div class="top-bar">
+    <a href="index.html" class="back-link">⬅ Home</a>
+    <h2>About</h2>
+    <nav class="top-bar-nav">
+      <a href="experiments.html">Experiments</a>
+      <a href="quiz.html">Quiz</a>
+    </nav>
+  </div>
+
+  <div class="about-page">
+    <h1>About Daruka VLab</h1>
+    <p class="subtitle">An educational virtual laboratory for autonomous firefighting robotics.</p>
+
+    <div class="about-card">
+      <h2>Project Overview</h2>
+      <p>Daruka VLab is an interactive virtual laboratory designed to teach the principles of autonomous firefighting robots. Through hands-on experiments, students explore real-time fire detection using YOLOv8, autonomous navigation with obstacle avoidance, and complete finite state machine (FSM) control logic.</p>
+      <p>The project follows the Glass-Box AI philosophy — making AI decision-making transparent and understandable by exposing confidence scores, bounding boxes, and state transitions to the learner.</p>
+    </div>
+
+    <div class="about-card">
+      <h2>Lab Experiments</h2>
+      <p><strong style="color:var(--danger);">Experiment 1:</strong> Real-time fire detection using webcam + YOLOv8 with adjustable confidence thresholds.</p>
+      <p><strong style="color:var(--accent);">Experiment 2:</strong> Autonomous navigation simulation with configurable obstacles, terrain, and speed.</p>
+      <p><strong style="color:var(--success);">Experiment 3:</strong> Full 7-state FSM mission simulation from detection through extinguishing and verification.</p>
+    </div>
+
+    <div class="about-card">
+      <h2>Technical Stack</h2>
+      <p>Frontend: HTML5, CSS3, Vanilla JavaScript, Google Model Viewer for 3D.</p>
+      <p>Backend: Python Flask + YOLOv8 (Ultralytics) hosted on Hugging Face Spaces.</p>
+      <p>Offline-capable frontend with simulated fallback when backend is unavailable.</p>
+    </div>
+
+    <div class="about-card">
+      <h2>Credits</h2>
+      <p>Developed as part of an academic project exploring autonomous robotics education through virtual laboratories.</p>
+      <p>Inspired by NPTEL and IIT Virtual Lab patterns for engineering education.</p>
+    </div>
+
+    <a href="index.html" class="link-btn" style="margin-top:16px;">← Back to Lab Home</a>
+  </div>
+
+</body>
+</html>

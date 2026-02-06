@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Experiment 2: Navigation | DARUKA VLab</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="top-bar">
+  <a href="experiments.html" class="back-link">⬅ Experiments</a>
+  <h2>Experiment 2 — Autonomous Navigation</h2>
+  <nav class="top-bar-nav">
+    <a href="fire-detection.html">← Exp 1</a>
+    <a href="simulation.html">Exp 3 →</a>
+  </nav>
+</header>
+
+<div class="nav-layout">
+
+  <div class="nav-viewport" id="viewport">
+    <canvas id="navCanvas" width="800" height="600"></canvas>
+  </div>
+
+  <aside class="nav-sidebar">
+
+    <div class="control-group">
+      <h3>Environment</h3>
+      <div class="dropdown" style="margin-bottom:10px; cursor:default; background:var(--panel); border-color:var(--accent); color:var(--accent); font-weight:600; text-align:center;">🗺️ Dynamic Grid Arena</div>
+    </div>
+
+    <div class="control-group">
+      <h3>Parameters</h3>
+      <div class="param-row">
+        <label>Obstacles</label>
+        <input type="range" id="slObstacles" min="3" max="20" value="8" oninput="doc('valObs').textContent=this.value">
+        <span class="param-val" id="valObs">8</span>
+      </div>
+      <div class="param-row">
+        <label>Terrain</label>
+        <input type="range" id="slTerrain" min="1" max="3" value="1" oninput="doc('valTer').textContent=['Smooth','Rough','Extreme'][this.value-1]">
+        <span class="param-val" id="valTer">Smooth</span>
+      </div>
+      <div class="param-row">
+        <label>Speed</label>
+        <input type="range" id="slSpeed" min="1" max="6" value="3" oninput="doc('valSpd').textContent=this.value">
+        <span class="param-val" id="valSpd">3</span>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <h3>Controls</h3>
+      <button class="btn primary" onclick="startNav()">▶ Start Navigation</button>
+      <button class="btn secondary" onclick="resetNav()">↻ Reset</button>
+    </div>
+
+    <div class="control-group">
+      <h3>Live Metrics</h3>
+      <div class="nav-stats">
+        <div class="nav-stat"><div class="ns-label">State</div><div class="ns-value" id="mState">IDLE</div></div>
+        <div class="nav-stat"><div class="ns-label">Distance</div><div class="ns-value" id="mDist">—</div></div>
+        <div class="nav-stat"><div class="ns-label">Time</div><div class="ns-value" id="mTime">0.0s</div></div>
+        <div class="nav-stat"><div class="ns-label">Path Len</div><div class="ns-value" id="mPath">0</div></div>
+        <div class="nav-stat"><div class="ns-label">Collisions</div><div class="ns-value" id="mColl">0</div></div>
+        <div class="nav-stat"><div class="ns-label">Avg Speed</div><div class="ns-value" id="mAvgSpd">—</div></div>
+      </div>
+    </div>
+
+    <div class="control-group fill-height">
+      <h3>Navigation Log</h3>
+      <div class="console-box" id="logBox">
+        <p class="sys">[SYS] Autonomous navigation module loaded</p>
+        <p class="sys">[SYS] Configure parameters and press Start</p>
+      </div>
+    </div>
+
+  </aside>
+</div>
+
+<script>
+function doc(id) { return document.getElementById(id); }
+
+const C = document.getElementById('navCanvas');
+const ctx = C.getContext('2d');
+const W = 800, H = 600;
+
+let running = false, raf = null;
+let robot = { x: 60, y: 300 };
+let fire = { x: 700, y: 300 };
+let obstacles = [];
+let trail = [];
+let collisions = 0;
+let startTime = 0;
+let pathLen = 0;
+let state = 'IDLE'; 
+let frameCount = 0;
+
+// Stuck detection variables
+let lastPositions = [];
+let escapeCounter = 0;
+let escapeAngle = 0;
+
+// --- Log ---
+function log(msg, cls='') {
+  const box = doc('logBox');
+  const p = document.createElement('p');
+  if (cls) p.className = cls;
+  p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  box.appendChild(p);
+  box.scrollTop = box.scrollHeight;
+}
+
+// --- Generate obstacles ---
+function generateObstacles(n) {
+  const obs = [];
+  for (let i = 0; i < n; i++) {
+    let tries = 0, ox, oy, ow, oh;
+    do {
+      ow = 30 + Math.random() * 70;
+      oh = 30 + Math.random() * 70;
+      ox = 120 + Math.random() * (W - 280);
+      oy = 40 + Math.random() * (H - 120);
+      tries++;
+    } while (tries < 50 && (
+      Math.hypot(ox + ow/2 - robot.x, oy + oh/2 - robot.y) < 100 ||
+      Math.hypot(ox + ow/2 - fire.x, oy + oh/2 - fire.y) < 100
+    ));
+    obs.push({ x: ox, y: oy, w: ow, h: oh });
+  }
+  return obs;
+}
+
+// --- Collision check ---
+function hitObstacle(px, py, pad) {
+  for (const o of obstacles) {
+    if (px > o.x - pad && px < o.x + o.w + pad && py > o.y - pad && py < o.y + o.h + pad) return true;
+  }
+  return false;
+}
+
+// --- Draw everything ---
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(31,38,48,0.6)';
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  // Obstacles
+  obstacles.forEach(o => {
+    ctx.fillStyle = '#2d3542';
+    ctx.strokeStyle = '#3e4756';
+    ctx.lineWidth = 2;
+    ctx.fillRect(o.x, o.y, o.w, o.h);
+    ctx.strokeRect(o.x, o.y, o.w, o.h);
+    
+    // Hatching
+    ctx.strokeStyle = 'rgba(62,71,86,0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(o.x, o.y); ctx.lineTo(o.x + o.w, o.y + o.h);
+    ctx.moveTo(o.x + o.w, o.y); ctx.lineTo(o.x, o.y + o.h);
+    ctx.stroke();
+  });
+
+  // Trail
+  if (trail.length > 1) {
+    ctx.strokeStyle = 'rgba(33,150,243,0.5)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(trail[0].x, trail[0].y);
+    for (let i = 1; i < trail.length; i++) {
+        ctx.lineTo(trail[i].x, trail[i].y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Fire
+  const fireGlow = 8 + 4 * Math.sin(Date.now() / 200);
+  ctx.shadowColor = '#ff4444';
+  ctx.shadowBlur = fireGlow;
+  ctx.font = '28px serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('🔥', fire.x, fire.y + 10);
+  ctx.shadowBlur = 0;
+  ctx.font = '500 10px Inter, sans-serif';
+  ctx.fillStyle = '#ff4444';
+  ctx.fillText('FIRE TARGET', fire.x, fire.y - 22);
+
+  // Robot
+  ctx.save();
+  ctx.translate(robot.x, robot.y);
+  
+  // Show stuck state visually
+  if (escapeCounter > 0) {
+      ctx.strokeStyle = 'rgba(255, 68, 68, 0.8)'; // Red ring when escaping
+  } else {
+      ctx.strokeStyle = 'rgba(33,150,243,0.25)'; // Blue ring normally
+  }
+  
+  const ringScale = 1.5 + 0.1 * Math.sin(Date.now() / 600);
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(0, 0, 20 * ringScale, 0, Math.PI * 2); ctx.stroke();
+
+  if (state === 'NAVIGATING' && escapeCounter === 0) {
+    const angle = Math.atan2(fire.y - robot.y, fire.x - robot.x);
+    ctx.rotate(angle);
+    ctx.fillStyle = 'rgba(255,152,0,0.8)';
+    ctx.beginPath();
+    ctx.moveTo(10, 0); ctx.lineTo(-8, 6); ctx.lineTo(-8, -6); ctx.fill();
+  } else if (escapeCounter > 0) {
+    // Show escape direction
+    ctx.rotate(escapeAngle);
+    ctx.fillStyle = 'rgba(255,68,68,0.8)';
+    ctx.beginPath();
+    ctx.moveTo(10, 0); ctx.lineTo(-8, 6); ctx.lineTo(-8, -6); ctx.fill();
+  }
+
+  ctx.font = '22px serif';
+  ctx.textAlign = 'center';
+  ctx.rotate(0);
+  ctx.fillText('🤖', 0, 8);
+  ctx.restore();
+  ctx.font = '500 10px Inter, sans-serif';
+  ctx.fillStyle = '#2196f3';
+  ctx.textAlign = 'center';
+  ctx.fillText('DARUKA', robot.x, robot.y - 22);
+}
+
+// --- Navigation logic ---
+function tick() {
+  if (!running || state !== 'NAVIGATING') return;
+
+  const terrainMod = [1, 0.65, 0.35][parseInt(doc('slTerrain').value) - 1];
+  const speed = parseInt(doc('slSpeed').value) * terrainMod;
+  const dist = Math.hypot(fire.x - robot.x, fire.y - robot.y);
+
+  if (dist < 35) {
+    state = 'ARRIVED';
+    running = false;
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    doc('mState').textContent = 'ARRIVED';
+    doc('mState').style.color = '#00e676';
+    doc('mDist').textContent = '0px';
+    log(`✅ ARRIVED at fire target in ${elapsed}s, path length: ${Math.round(pathLen)}px`, 'path');
+    draw();
+    return;
+  }
+
+  let dx, dy;
+
+  // --- ESCAPE LOGIC ---
+  if (escapeCounter > 0) {
+    // We are stuck, ignore target, force move in escape direction
+    dx = Math.cos(escapeAngle);
+    dy = Math.sin(escapeAngle);
+    escapeCounter--;
+    
+    // If we hit a wall while escaping, bounce randomly
+    if (hitObstacle(robot.x + dx * speed * 2, robot.y + dy * speed * 2, 20)) {
+        escapeAngle += Math.PI / 2 + (Math.random() - 0.5);
+    }
+  } else {
+    // Normal Navigation
+    dx = fire.x - robot.x;
+    dy = fire.y - robot.y;
+    const mag = Math.hypot(dx, dy);
+    dx /= mag; dy /= mag;
+  }
+
+  let nx = robot.x + dx * speed;
+  let ny = robot.y + dy * speed;
+
+  // Collision Avoidance
+  if (hitObstacle(nx, ny, 20)) {
+    collisions++;
+    doc('mColl').textContent = collisions;
+    const angles = [0.5, -0.5, 1.0, -1.0, 1.5, -1.5, 2.0, -2.0]; // Broadened search angles
+    let foundPath = false;
+    
+    for (let angle of angles) {
+        let rx = dx * Math.cos(angle) - dy * Math.sin(angle);
+        let ry = dx * Math.sin(angle) + dy * Math.cos(angle);
+        let tx = robot.x + rx * speed;
+        let ty = robot.y + ry * speed;
+        if (!hitObstacle(tx, ty, 20) && tx > 10 && tx < W-10 && ty > 10 && ty < H-10) {
+            nx = tx; ny = ty; foundPath = true; break;
+        }
+    }
+    // If absolutely blocked, trigger escape immediately
+    if (!foundPath) {
+        triggerEscape(); 
+        nx = robot.x; // Stay put this frame
+        ny = robot.y;
+    }
+  }
+
+  // Bounds check
+  nx = Math.max(15, Math.min(W - 15, nx));
+  ny = Math.max(15, Math.min(H - 15, ny));
+
+  const step = Math.hypot(nx - robot.x, ny - robot.y);
+  pathLen += step;
+  robot.x = nx;
+  robot.y = ny;
+
+  frameCount++;
+
+  // --- STUCK DETECTION ---
+  // Every 20 frames, check how far we moved
+  if (frameCount % 20 === 0) {
+      if (lastPositions.length > 0) {
+          const old = lastPositions[lastPositions.length - 1];
+          const movedDist = Math.hypot(robot.x - old.x, robot.y - old.y);
+          
+          // If moved less than 10px in 20 frames, we are stuck
+          if (movedDist < 10 && escapeCounter === 0) {
+              triggerEscape();
+          }
+      }
+      lastPositions.push({x: robot.x, y: robot.y});
+      if (lastPositions.length > 5) lastPositions.shift();
+  }
+
+  // Trail
+  if (frameCount % 5 === 0 && step > 0.5) {
+      trail.push({ x: robot.x, y: robot.y });
+      if (trail.length > 500) trail.shift();
+  }
+
+  if (frameCount % 10 === 0) {
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    doc('mDist').textContent = Math.round(dist) + 'px';
+    doc('mTime').textContent = elapsed + 's';
+    doc('mPath').textContent = Math.round(pathLen);
+    doc('mAvgSpd').textContent = (pathLen / parseFloat(elapsed || 1)).toFixed(1);
+  }
+}
+
+function triggerEscape() {
+    escapeCounter = 30; // Run escape mode for 30 frames (approx 0.5s)
+    escapeAngle = Math.random() * Math.PI * 2; // Pick random direction
+    doc('mState').textContent = 'UNSTICKING';
+    doc('mState').style.color = '#ff4444';
+    // log('Robot stuck - engaging escape maneuver', 'warn');
+}
+
+function loop() {
+  if (!running) return;
+  tick();
+  draw();
+  raf = requestAnimationFrame(loop);
+}
+
+// --- Controls ---
+function startNav() {
+  if (running) return;
+
+  const obsCount = parseInt(doc('slObstacles').value);
+  fire.x = 650 + Math.random() * 100;
+  fire.y = 80 + Math.random() * (H - 160);
+  robot.x = 60;
+  robot.y = 60 + Math.random() * (H - 120);
+  
+  obstacles = generateObstacles(obsCount);
+  trail = [{ x: robot.x, y: robot.y }];
+  lastPositions = []; // Reset stuck history
+  
+  collisions = 0;
+  pathLen = 0;
+  frameCount = 0;
+  escapeCounter = 0; // Reset escape
+  startTime = Date.now();
+
+  state = 'NAVIGATING';
+  running = true;
+
+  doc('mState').textContent = 'NAVIGATING';
+  doc('mState').style.color = '#ff9800';
+  doc('mColl').textContent = '0';
+  doc('mPath').textContent = '0';
+  doc('mAvgSpd').textContent = '—';
+
+  log(`Navigation started: ${obsCount} obstacles, terrain ${doc('valTer').textContent}`, 'path');
+  
+  loop();
+}
+
+function resetNav() {
+  running = false;
+  state = 'IDLE';
+  if (raf) cancelAnimationFrame(raf);
+  
+  robot = { x: 60, y: 300 };
+  fire = { x: 700, y: 300 };
+  obstacles = [];
+  trail = [];
+  collisions = 0;
+  
+  doc('mState').textContent = 'IDLE';
+  doc('mState').style.color = '#bfc7d5';
+  
+  ctx.clearRect(0, 0, W, H);
+  draw();
+  log('Navigation reset', 'warn');
+}
+
+// Initialize
+draw();
+</script>
+
+</body>
+</html>

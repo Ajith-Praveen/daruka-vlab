@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Architecture | DARUKA VLab</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <div class="top-bar">
+    <a href="index.html" class="back-link">⬅ Home</a>
+    <h2>System Architecture</h2>
+    <nav class="top-bar-nav">
+      <a href="components.html">3D Model</a>
+      <a href="experiments.html">Experiments</a>
+      <a href="quiz.html">Quiz</a>
+    </nav>
+  </div>
+
+  <div class="arch-content">
+    <h1>System Architecture</h1>
+    <p class="subtitle" style="text-align:center;margin-bottom:36px;">Hardware design, software pipeline, and FSM control flow of the Daruka firefighting robot.</p>
+
+    <section class="arch-section">
+      <h2>Hardware Block Diagram</h2>
+      <p>The robot integrates sensing, processing, actuation, and power subsystems into a compact chassis designed for indoor firefighting scenarios.</p>
+      <div class="arch-blocks">
+        <div class="arch-block"><div class="block-icon"></div><h4>Camera Module</h4><p>RPi Camera v2</p></div>
+        <div class="arch-block"><div class="block-icon"></div><h4>Flame Sensors</h4><p>5-Channel IR Array</p></div>
+        <div class="arch-block"><div class="block-icon"></div><h4>Raspberry Pi 5</h4><p>Main Controller</p></div>
+        <div class="arch-block"><div class="block-icon"></div><h4>PCA9685</h4><p>I²C PWM Driver</p></div>
+        <div class="arch-block"><div class="block-icon"></div><h4>DC Motors + L298</h4><p>Drive System</p></div>
+        <div class="arch-block"><div class="block-icon"></div><h4>Aerosol Extinguisher</h4><p>Suppression Unit</p></div>
+        <div class="arch-block"><div class="block-icon"></div><h4>LiPo Battery</h4><p>3300mAh Power</p></div>
+        <div class="arch-block"><div class="block-icon"></div><h4>Nozzle Assembly</h4><p>Servo-Controlled Aim</p></div>
+      </div>
+    </section>
+
+    <section class="arch-section">
+      <h2>Software Pipeline</h2>
+      <p>Onboard software runs on the Raspberry Pi 5, processing sensor input through a real-time pipeline from perception to action.</p>
+      <div class="arch-blocks">
+        <div class="arch-block"><div class="block-icon"></div><h4>YOLOv8 Inference</h4><p>Fire detection CNN</p></div>
+        <div class="arch-block"><div class="block-icon"></div><h4>Path Planner</h4><p>Obstacle avoidance</p></div>
+        <div class="arch-block"><div class="block-icon"></div><h4>FSM Controller</h4><p>7-state machine</p></div>
+        <div class="arch-block"><div class="block-icon"></div><h4>Sensor Fusion</h4><p>Camera + IR array</p></div>
+      </div>
+    </section>
+
+    <section class="arch-section">
+      <h2>Data Flow</h2>
+      <p>Sensor data flows into the Raspberry Pi for processing, which commands actuators based on FSM state transitions.</p>
+      <div style="text-align:center;padding:20px 0;font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--muted);line-height:2.2;">
+        <span style="color:#ff9800;">Camera + Flame Sensors</span><br>
+        ⬇<br>
+        <span style="color:#2196f3;">Raspberry Pi 5 (YOLOv8 + FSM)</span><br>
+        ⬇<br>
+        <span style="color:#00e676;">Motor Drivers + Nozzle → Physical Action</span>
+      </div>
+    </section>
+
+    <section class="arch-section">
+      <h2>Finite State Machine</h2>
+      <p>The robot operates through 7 discrete states. Each state has defined entry/exit conditions ensuring deterministic behavior.</p>
+      <div class="fsm-diagram">
+        <div class="fsm-node" style="border-color:#bfc7d5;color:#bfc7d5;">IDLE</div>
+        <span class="fsm-arrow">→</span>
+        <div class="fsm-node" style="border-color:#ff4444;color:#ff4444;">DETECT</div>
+        <span class="fsm-arrow">→</span>
+        <div class="fsm-node" style="border-color:#ff9800;color:#ff9800;">NAVIGATE</div>
+        <span class="fsm-arrow">→</span>
+        <div class="fsm-node" style="border-color:#e040fb;color:#e040fb;">AIM</div>
+        <span class="fsm-arrow">→</span>
+        <div class="fsm-node" style="border-color:#2196f3;color:#2196f3;">EXTINGUISH</div>
+        <span class="fsm-arrow">→</span>
+        <div class="fsm-node" style="border-color:#ffeb3b;color:#ffeb3b;">VERIFY</div>
+        <span class="fsm-arrow">→</span>
+        <div class="fsm-node" style="border-color:#00e676;color:#00e676;">COMPLETE</div>
+      </div>
+    </section>
+  </div>
+
+</body>
+</html>

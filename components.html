@@ -1,169 +1,97 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width", initial-sacle="1.0">
-  <title>Robot Architecture | DARUKA VLab</title>
-
-  <!-- Font -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-
-  <!-- Model Viewer -->
-  <script type="module"
-    src="https://unpkg.com/@google/model-viewer@4.0.0/dist/model-viewer.min.js">
-  </script>
-
-  <!-- Styles -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Robot Explorer | DARUKA VLab</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script type="module" src="https://unpkg.com/@google/model-viewer@4.0.0/dist/model-viewer.min.js"></script>
   <link rel="stylesheet" href="css/style.css">
 </head>
-
 <body>
 
 <header class="top-bar">
-  <h2>Robot Architecture Exploration</h2>
-  <a href="index.html" class="back-link">⬅ Back to Lab</a>
+  <a href="index.html" class="back-link">⬅ Home</a>
+  <h2>3D Robot Explorer</h2>
+  <nav class="top-bar-nav">
+    <a href="experiments.html">Experiments →</a>
+  </nav>
 </header>
 
 <div class="components-layout">
 
-  <!-- LEFT INFO PANEL -->
+  <!-- LEFT PANEL -->
   <aside class="info-panel" id="info-panel">
-    <h3 id="part-title">Select a Component</h3>
-    <p id="part-desc">
-      Click on the highlighted components of the robot to understand their role
-      in the overall robotic system.
-    </p>
+    <div class="info-header">
+      <h3>Robot Components</h3>
+      <p>Click a component below or tap a hotspot on the 3D model to explore.</p>
+    </div>
+
+    <div class="comp-list" id="compList"></div>
+
+    <div class="comp-detail" id="compDetail">
+      <h4 id="partTitle">Select a Component</h4>
+      <p id="partDesc">Tap on any highlighted hotspot on the 3D model or choose from the list above to learn about each part of the firefighting robot.</p>
+    </div>
+
+    
   </aside>
 
-  <!-- 3D VIEW -->
+  <!-- 3D VIEWER -->
   <section class="viewer-panel">
     <model-viewer
       id="robotViewer"
       src="models/Daruka_VLab_FireFighting_Robot.glb"
-      
       camera-controls
       camera-projection="orthographic"
       camera-orbit="-65deg 85deg 0.8m"
       camera-transition-duration="800"
-
       exposure="0.9"
       shadow-intensity="1.5"
       style="width:100%; height:100%;">
 
-      <!-- Hotspots will be added here in next step -->
-    <button
-      class="hotspot"
-      slot="hotspot-camera"
-      data-position="-0.07102420571998731m 0.15213852793249805m 0.008793224454215836m"
-      data-normal="-1m 0m 0m"
-      onclick="focusComponent('camera')">
-    </button>
-
-    <button
-      class="hotspot"
-      slot="hotspot-extinguisher-motor"
-      data-position="-0.10665420337479214m 0.09699978610179988m 0.005107488047289472m"
-      data-normal="-0.9999999999999831m 7.549790862822797e-8m -1.685873948952886e-7m"
-      onclick="focusComponent('extinguisher_motor')">
-    </button>
-    
-    <button
-      class="hotspot"
-      slot="hotspot-flame"
-      data-position="-0.11356263685580686m 0.019703902397880044m -0.003619282657945113m"
-      data-normal="-0.9999999999999963m 0m -8.742277657347549e-8m"
-      onclick="focusComponent('flame')">
-    </button>
-
-    <button
-      class="hotspot"
-      slot="hotspot-main-controller"
-      data-position="-0.03613981987876535m 0.05009180515901456m -0.04478005496504992m"
-      data-normal="2.0281593271498363e-7m 0m -0.9999999999999795m"
-      onclick="focusComponent('rp5')">
-    </button>
-
-    <button
-      class="hotspot"
-      slot="hotspot-pca9685"
-      data-position="0.011399626996136893m 0.03816568544862832m -0.0022236293256010413m"
-      data-normal="-1.9306160374288532e-7m -0.30639174466424757m -0.9519055093871248m"
-      onclick="focusComponent('pca')">
-    </button>
-
-    <button
-      class="hotspot"
-      slot="hotspot-fire-extinguisher"
-      data-position="0.027005117080665553m 0.10483874083178507m -0.022260184099196178m"
-      data-normal="-0.653969758313234m 0.5024360311502385m -0.5655807544583948m"
-      onclick="focusComponent('fe')">
-    </button>
-
-    <button
-      class="hotspot"
-      slot="hotspot-chasis"
-      data-position="-0.07314257447397317m 0.035023776729021835m 0.06277128861846155m"
-      data-normal="0m 0.9999999999999888m -1.5099578831723023e-7m"
-      onclick="focusComponent('chasis')">
-    </button>
-
-    <button
-      class="hotspot"
-      slot="hotspot-wheels&motors"
-      data-position="-0.04188774227902059m 0.0035745466173713776m 0.09385164038672945m"
-      data-normal="-0.9712653831064081m -0.23646677629868665m 0.02696329516341532m"
-      onclick="focusComponent('w_m')">
-    </button>
-
-    <button
-      class="hotspot"
-      slot="hotspot-piston"
-      data-position="-0.04188774227902059m 0.0035745466173713776m 0.09385164038672945m"
-      data-normal="-0.9712653831064081m -0.23646677629868665m 0.02696329516341532m"
-      onclick="focusComponent('w_m')">
-    </button>
-
-    <button
-      class="hotspot"
-      slot="hotspot-battery"
-      data-position="0.0005845548781250017m 0.0030226031664313553m -0.005514846445914594m"
-      data-normal="0m -1m 0m"
-      onclick="focusComponent('battery')">
-    </button>
-
-    <button
-      class="hotspot"
-      slot="hotspot-motor-driver"
-      data-position="-0.07362420832653618m 0.01592730551103507m -0.00006150766234024399m"
-      data-normal="0m -0.999999999999991m 1.343588384994376e-7m"
-      onclick="focusComponent('md')">
-    </button>
-
-    <button
-      class="hotspot"
-      slot="hotspot-piston-module"
-      data-position="-0.02211739205307557m 0.08811875115915774m -0.009361495963621166m"
-      data-normal="0.6334763717649567m -0.0006070042423088681m -0.7737617966540841m"
-      onclick="focusComponent('piston')">
-    </button>
-
-    <button
-      class="hotspot"
-      slot="hotspot-nozzle-motor"
-      data-position="-0.07148060117069222m 0.08050487062906415m -0.03900430956861292m"
-      data-normal="-0.4599726873193778m 0m -0.8879330644368358m"
-      onclick="focusComponent('nm')">
-    </button>
-
-    <button
-      class="hotspot"
-      slot="hotspot-nozzle"
-      data-position="-0.12620879500182644m 0.09838189652994142m -0.027197915248763863m"
-      data-normal="-0.5304729783596169m -0.6732097332456638m -0.5151573296514179m"
-      onclick="focusComponent('nozzle')">
-    </button>
+      <button class="hotspot" slot="hotspot-camera"
+        data-position="-0.07102420571998731m 0.15213852793249805m 0.008793224454215836m"
+        data-normal="-1m 0m 0m" onclick="focusComponent('camera')"></button>
+      <button class="hotspot" slot="hotspot-extinguisher-motor"
+        data-position="-0.10665420337479214m 0.09699978610179988m 0.005107488047289472m"
+        data-normal="-0.9999999999999831m 7.549790862822797e-8m -1.685873948952886e-7m" onclick="focusComponent('extinguisher_motor')"></button>
+      <button class="hotspot" slot="hotspot-flame"
+        data-position="-0.11356263685580686m 0.019703902397880044m -0.003619282657945113m"
+        data-normal="-0.9999999999999963m 0m -8.742277657347549e-8m" onclick="focusComponent('flame')"></button>
+      <button class="hotspot" slot="hotspot-main-controller"
+        data-position="-0.03613981987876535m 0.05009180515901456m -0.04478005496504992m"
+        data-normal="2.0281593271498363e-7m 0m -0.9999999999999795m" onclick="focusComponent('rp5')"></button>
+      <button class="hotspot" slot="hotspot-pca9685"
+        data-position="0.011399626996136893m 0.03816568544862832m -0.0022236293256010413m"
+        data-normal="-1.9306160374288532e-7m -0.30639174466424757m -0.9519055093871248m" onclick="focusComponent('pca')"></button>
+      <button class="hotspot" slot="hotspot-fire-extinguisher"
+        data-position="0.027005117080665553m 0.10483874083178507m -0.022260184099196178m"
+        data-normal="-0.653969758313234m 0.5024360311502385m -0.5655807544583948m" onclick="focusComponent('fe')"></button>
+      <button class="hotspot" slot="hotspot-chasis"
+        data-position="-0.07314257447397317m 0.035023776729021835m 0.06277128861846155m"
+        data-normal="0m 0.9999999999999888m -1.5099578831723023e-7m" onclick="focusComponent('chasis')"></button>
+      <button class="hotspot" slot="hotspot-wheels-motors"
+        data-position="-0.04188774227902059m 0.0035745466173713776m 0.09385164038672945m"
+        data-normal="-0.9712653831064081m -0.23646677629868665m 0.02696329516341532m" onclick="focusComponent('w_m')"></button>
+      <button class="hotspot" slot="hotspot-battery"
+        data-position="0.0005845548781250017m 0.0030226031664313553m -0.005514846445914594m"
+        data-normal="0m -1m 0m" onclick="focusComponent('battery')"></button>
+      <button class="hotspot" slot="hotspot-motor-driver"
+        data-position="-0.07362420832653618m 0.01592730551103507m -0.00006150766234024399m"
+        data-normal="0m -0.999999999999991m 1.343588384994376e-7m" onclick="focusComponent('md')"></button>
+      <button class="hotspot" slot="hotspot-piston-module"
+        data-position="-0.02211739205307557m 0.08811875115915774m -0.009361495963621166m"
+        data-normal="0.6334763717649567m -0.0006070042423088681m -0.7737617966540841m" onclick="focusComponent('piston')"></button>
+      <button class="hotspot" slot="hotspot-nozzle-motor"
+        data-position="-0.07148060117069222m 0.08050487062906415m -0.03900430956861292m"
+        data-normal="-0.4599726873193778m 0m -0.8879330644368358m" onclick="focusComponent('nm')"></button>
+      <button class="hotspot" slot="hotspot-nozzle"
+        data-position="-0.12620879500182644m 0.09838189652994142m -0.027197915248763863m"
+        data-normal="-0.5304729783596169m -0.6732097332456638m -0.5151573296514179m" onclick="focusComponent('nozzle')"></button>
 
     </model-viewer>
+    <div class="viewer-hint">🖱️ Drag to rotate · Scroll to zoom · Click hotspot to explore</div>
   </section>
 
 </div>
