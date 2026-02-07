@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Experiment 1: Fire Detection | DARUKA VLab</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -31,15 +32,19 @@
       </div>
       
       <div class="fd-live-badge" id="liveBadge">● LIVE</div>
-      <div class="fd-yolo-tag" id="yoloTag">YOLOv8 · fire-detection</div>
-      
-      <div id="simBanner" style="display:none; position:absolute; bottom:10px; left:10px; right:10px; background:rgba(255,152,0,0.9); color:white; padding:8px 12px; border-radius:6px; font-size:0.85rem; font-weight:500; z-index:10;">
-        ⚠️ Backend Offline — Switched to <strong>Simulation Mode</strong>
-      </div>
+      <div class="fd-yolo-tag" id="yoloTag">System Ready</div>
     </div>
   </div>
 
   <aside class="fd-sidebar">
+
+    <div class="control-group">
+      <h3>Detection Logic</h3>
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="modeOnnx" onclick="setMode('onnx')">ONNX (AI)</button>
+        <button class="mode-btn" id="modeHsv" onclick="setMode('hsv')">HSV (Rules)</button>
+      </div>
+    </div>
 
     <div class="control-group">
       <h3>Camera Controls</h3>
@@ -50,16 +55,16 @@
     </div>
 
     <div class="control-group">
-      <h3>Detection Threshold</h3>
+      <h3>Parameters</h3>
       <div class="param-row">
         <label>Confidence</label>
         <input type="range" id="thresholdSlider" min="10" max="95" value="40" oninput="updateThreshold(this.value)">
         <span class="param-val" id="thresholdVal">0.40</span>
       </div>
       <div class="param-row">
-        <label>Poll Rate</label>
-        <input type="range" id="pollSlider" min="500" max="5000" value="1000" step="250" oninput="updatePoll(this.value)">
-        <span class="param-val" id="pollVal">1.0s</span>
+        <label>Throttle</label>
+        <input type="range" id="pollSlider" min="0" max="1000" value="100" step="50" oninput="updatePoll(this.value)">
+        <span class="param-val" id="pollVal">100ms</span>
       </div>
     </div>
 
@@ -70,7 +75,7 @@
         <div class="fd-stat fire-on"><div class="fs-label">Fire</div><div class="fs-value" id="statFire">—</div></div>
         <div class="fd-stat"><div class="fs-label">Confidence</div><div class="fs-value" id="statConf">—</div></div>
         <div class="fd-stat"><div class="fs-label">Detections</div><div class="fs-value" id="statCount">0</div></div>
-        <div class="fd-stat"><div class="fs-label">Mode</div><div class="fs-value" id="statMode">CLOUD</div></div>
+        <div class="fd-stat"><div class="fs-label">Mode</div><div class="fs-value" id="statMode">ONNX</div></div>
         <div class="fd-stat"><div class="fs-label">Latency</div><div class="fs-value" id="statLatency">—</div></div>
       </div>
     </div>
@@ -78,16 +83,15 @@
     <div class="control-group">
       <h3>Glass-Box AI</h3>
       <div class="fd-glass-box">
-        <h4>What's Happening?</h4>
-        <p id="glassBoxText">The YOLOv8 model receives your camera frames, processes them through a convolutional neural network, and returns bounding boxes with confidence scores for detected fire regions.</p>
+        <h4>System Internals</h4>
+        <p id="glassBoxText">System is idle. Select a mode and start the camera to visualize the decision-making process.</p>
       </div>
     </div>
 
     <div class="control-group fill-height">
       <h3>Detection Log</h3>
       <div class="console-box" id="logBox">
-        <p class="sys">[SYS] Fire detection module ready</p>
-        <p class="sys">[SYS] Backend: aj0726-daruka-vlab-backend.hf.space</p>
+        <p class="sys">[SYS] System Ready.</p>
       </div>
     </div>
 
@@ -96,20 +100,22 @@
 
 <script>
 /* --- CONFIGURATION --- */
-const BACKEND = 'https://daruka-be.onrender.com';
+const ONNX_MODEL_PATH = './best.onnx'; // Relative path
 let threshold = 0.40;
-let pollRate = 10000; // 1 second
+let pollRate = 100; // ms between frames
+let activeMode = 'onnx'; // 'onnx' or 'hsv'
 
 /* --- STATE --- */
 let camStream = null;
-let pollInterval = null;
-let detectionCount = 0;
-let isSimMode = false; // Starts false, switches true on error
+let detectionLoopId = null;
+let ortSession = null;
+let isModelLoading = false;
+let lastProcessTime = 0;
 
 /* --- ELEMENTS --- */
 const video = document.getElementById('camVideo');
 const canvas = document.getElementById('overlayCanvas');
-const ctx = canvas.getContext('2d');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
 // --- Log utility ---
 function log(msg, cls = '') {
@@ -120,6 +126,24 @@ function log(msg, cls = '') {
   box.prepend(p);
 }
 
+// --- Mode Selection ---
+function setMode(mode) {
+  activeMode = mode;
+  document.getElementById('modeOnnx').className = mode === 'onnx' ? 'mode-btn active' : 'mode-btn';
+  document.getElementById('modeHsv').className = mode === 'hsv' ? 'mode-btn active' : 'mode-btn';
+  
+  document.getElementById('statMode').textContent = mode.toUpperCase();
+  document.getElementById('yoloTag').textContent = mode === 'onnx' ? 'YOLOv8 · fire-detection' : 'HSV · Color Thresholding';
+  
+  if (mode === 'onnx') {
+    document.getElementById('glassBoxText').textContent = "Switched to Deep Learning. Using Convolutional Neural Network (YOLOv8) to identify fire patterns based on learned features.";
+    if (!ortSession && !isModelLoading) initONNX();
+  } else {
+    document.getElementById('glassBoxText').textContent = "Switched to Computer Vision (HSV). Algorithm scans pixels for specific High-Saturation, High-Value Orange/Red hues.";
+  }
+  log(`Mode switched to ${mode.toUpperCase()}`, 'sys');
+}
+
 // --- UI Updates ---
 function updateThreshold(val) {
   threshold = val / 100;
@@ -128,24 +152,70 @@ function updateThreshold(val) {
 
 function updatePoll(val) {
   pollRate = parseInt(val);
-  document.getElementById('pollVal').textContent = (pollRate / 1000).toFixed(1) + 's';
-  if (pollInterval) {
-    clearInterval(pollInterval);
-    pollInterval = setInterval(sendFrame, pollRate);
+  document.getElementById('pollVal').textContent = pollRate + 'ms';
+}
+
+// --- ONNX Initialization ---
+// --- ONNX Initialization ---
+async function initONNX() {
+  if (ortSession || isModelLoading) return;
+  isModelLoading = true;
+  log('Loading ONNX model...', 'sys');
+  document.getElementById('yoloTag').textContent = "Loading ONNX...";
+  
+  // DISABLE ONNX WARNINGS (Fix for "Unknown CPU vendor" logs)
+  ort.env.logLevel = 'error'; // Global log level
+  
+  try {
+    // 1. Verify file exists
+    const response = await fetch(ONNX_MODEL_PATH, { method: 'HEAD' });
+    if (!response.ok && response.status === 404) {
+       throw new Error(`File not found: ${ONNX_MODEL_PATH}`);
+    }
+
+    // 2. Create Session with suppressed logs
+    ortSession = await ort.InferenceSession.create(ONNX_MODEL_PATH, {
+      executionProviders: ['wasm'], 
+      graphOptimizationLevel: 'all',
+      executionMode: 'sequential', 
+      intraOpNumThreads: 1,
+      logSeverityLevel: 3  // 0:Verbose, 1:Info, 2:Warning, 3:Error, 4:Fatal
+    });
+
+    log('ONNX Model loaded successfully.', 'sys');
+    document.getElementById('yoloTag').textContent = "YOLOv8 · Ready";
+  } catch (e) {
+    console.error(e);
+    log(`ERROR: Could not load model. ${e.message}`, 'err');
+    log(`Verify file exists at: public/best.onnx`, 'warn');
+    document.getElementById('yoloTag').textContent = "Model Error";
+    document.getElementById('glassBoxText').textContent = "⚠️ Error: Model file not found or blocked. Switched to HSV mode automatically.";
+    setMode('hsv');
+  } finally {
+    isModelLoading = false;
   }
 }
 
 // --- Camera Logic ---
 async function startCamera() {
+  if (!ortSession && activeMode === 'onnx') await initONNX();
+
   try {
-    // Standard constraints
-    const constraints = { video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } } };
+    const constraints = { 
+      video: { 
+        facingMode: 'environment', 
+        width: { ideal: 640 }, 
+        height: { ideal: 640 } 
+      } 
+    };
     camStream = await navigator.mediaDevices.getUserMedia(constraints);
     
     video.srcObject = camStream;
+    // Wait for metadata to set canvas size
     video.onloadedmetadata = () => {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
+      video.play();
     };
 
     // UI Updates
@@ -154,20 +224,15 @@ async function startCamera() {
     document.getElementById('yoloTag').style.display = 'block';
     document.getElementById('btnStart').disabled = true;
     document.getElementById('btnStop').disabled = false;
-    document.getElementById('statStatus').textContent = 'SCANNING';
-    document.getElementById('statStatus').style.color = '#00e676';
+    document.getElementById('statStatus').textContent = 'ACTIVE';
     
-    // Reset State
-    isSimMode = false;
-    document.getElementById('simBanner').style.display = 'none';
-    document.getElementById('statMode').textContent = 'CLOUD';
-
-    log('Camera active. Starting detection loop...', 'sys');
-    pollInterval = setInterval(sendFrame, pollRate);
+    
+    log('Camera active. Starting pipeline.', 'sys');
+    requestAnimationFrame(processFrame);
 
   } catch (err) {
-    console.warn("Camera Error:", err); // Warn only
-    log('Camera access denied. Check permissions.', 'err');
+    console.error(err);
+    log('Camera access denied.', 'err');
     document.getElementById('statStatus').textContent = 'ERROR';
   }
 }
@@ -177,7 +242,7 @@ function stopCamera() {
     camStream.getTracks().forEach(t => t.stop());
     camStream = null;
   }
-  clearInterval(pollInterval);
+  cancelAnimationFrame(detectionLoopId);
   video.srcObject = null;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
@@ -188,142 +253,291 @@ function stopCamera() {
   document.getElementById('btnStart').disabled = false;
   document.getElementById('btnStop').disabled = true;
   document.getElementById('statStatus').textContent = 'IDLE';
-  document.getElementById('statStatus').style.color = '#ff9800';
+  
   document.getElementById('statFire').textContent = '—';
-  document.getElementById('statFire').style.color = '#fff';
+  
+  document.getElementById('statLatency').textContent = '—';
   
   log('Session stopped.', 'warn');
 }
 
-// --- Detection Loop ---
-async function sendFrame() {
-  if (!camStream || video.readyState < 2) return;
-
-  // 1. If we are already in Sim Mode, just run sim
-  if (isSimMode) {
-    runSimulation();
+// --- Main Processing Loop ---
+async function processFrame(timestamp) {
+  if (!camStream || video.readyState < 2) {
+    detectionLoopId = requestAnimationFrame(processFrame);
     return;
   }
 
-  // 2. Prepare Frame
-  const tmpC = document.createElement('canvas');
-  tmpC.width = video.videoWidth;
-  tmpC.height = video.videoHeight;
-  tmpC.getContext('2d').drawImage(video, 0, 0);
-
-  // 3. Try Backend
-  try {
-    const blob = await new Promise(r => tmpC.toBlob(r, 'image/jpeg', 0.6));
-    const fd = new FormData();
-    fd.append('image', blob, 'frame.jpg');
-
-    const start = performance.now();
-    
-    // Fetch with 1.5s timeout so we don't hang
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1500);
-
-    const res = await fetch(BACKEND + '/detect', { 
-      method: 'POST', 
-      body: fd,
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-
-    if (!res.ok) throw new Error(res.status);
-
-    const data = await res.json();
-    document.getElementById('statLatency').textContent = Math.round(performance.now() - start) + 'ms';
-    
-    processDetections(data);
-
-  } catch (e) {
-    // 4. ON FAILURE: Switch to Sim Mode instantly & silently
-    activateSimMode();
+  // Throttle (Poll Rate)
+  if (timestamp - lastProcessTime < pollRate) {
+    detectionLoopId = requestAnimationFrame(processFrame);
+    return;
   }
-}
+  lastProcessTime = timestamp;
 
-function activateSimMode() {
-  isSimMode = true;
-  document.getElementById('statMode').textContent = 'SIM';
-  document.getElementById('statMode').style.color = '#ff9800';
-  document.getElementById('simBanner').style.display = 'block';
-  document.getElementById('glassBoxText').textContent = "⚠️ CONNECTION LOST. Switched to Demo Mode (Simulation). Detections are generated locally.";
-  log('Backend unavailable. Switched to Simulation Mode.', 'warn');
-  runSimulation();
-}
-
-function runSimulation() {
-  // Fake Latency
-  document.getElementById('statLatency').textContent = Math.floor(Math.random() * 30 + 20) + 'ms';
-
-  // 30% chance to "detect" fire
-  if (Math.random() > 0.7) {
-    const w = video.videoWidth;
-    const h = video.videoHeight;
-    // Create random box near center
-    const boxW = 120, boxH = 150;
-    const x = (w/2) - (boxW/2) + (Math.random()*40 - 20);
-    const y = (h/2) - (boxH/2) + (Math.random()*40 - 20);
-
-    processDetections([{
-      label: 'fire',
-      confidence: 0.85 + (Math.random() * 0.14),
-      bbox: [x, y, x+boxW, y+boxH]
-    }]);
-  } else {
-    processDetections([]);
-  }
-}
-
-// --- Draw Results ---
-function processDetections(list) {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const startTime = performance.now();
   
-  // Filter
-  const valid = list.filter(d => d.confidence >= threshold);
+  // Clear previous drawings
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+  let detections = [];
+
+  if (activeMode === 'onnx') {
+    // Only run if session exists, otherwise skip (safeguard against model load fail)
+    if (ortSession) {
+      try {
+        detections = await runYoloInference();
+      } catch (e) {
+        console.warn("Inference Error:", e);
+      }
+    }
+  } else {
+    detections = runHSVInference();
+  }
+
+  const latency = Math.round(performance.now() - startTime);
+  document.getElementById('statLatency').textContent = latency + 'ms';
+  
+  updateStats(detections);
+  drawDetections(detections);
+  
+  detectionLoopId = requestAnimationFrame(processFrame);
+}
+
+// --- ALGORITHM 1: YOLOv8 ONNX ---
+async function runYoloInference() {
+  document.getElementById('glassBoxText').textContent = "Mode: ONNX (YOLOv8)\n1. Input: Resizing frame to 640x640\n2. Norm: converting RGB to float32 (0-1)\n3. Infer: Running CNN model\n4. Output: Decoding boxes & NMS";
+
+  // 1. Prepare Input
+  const modelInputShape = [1, 3, 640, 640];
+  const matC = document.createElement('canvas');
+  matC.width = 640; matC.height = 640;
+  const matCtx = matC.getContext('2d');
+  matCtx.drawImage(video, 0, 0, 640, 640);
+  
+  const imgData = matCtx.getImageData(0,0,640,640).data;
+  const float32Data = new Float32Array(3 * 640 * 640);
+  
+  // HWC to CHW and Normalize
+  for (let i = 0; i < 640 * 640; i++) {
+    float32Data[i] = imgData[i * 4] / 255.0;              // R
+    float32Data[i + 640*640] = imgData[i * 4 + 1] / 255.0; // G
+    float32Data[i + 2*640*640] = imgData[i * 4 + 2] / 255.0; // B
+  }
+
+  const inputTensor = new ort.Tensor('float32', float32Data, modelInputShape);
+  
+  // 2. Run Inference
+  const feeds = { images: inputTensor }; 
+  const results = await ortSession.run(feeds);
+  const output = results.output0.data; 
+  
+  // 3. Post Process
+  // YOLOv8 Output shape is usually [1, 5, 8400] for 1 class (cx, cy, w, h, conf)
+  const boxes = [];
+  const numAnchors = 8400; 
+  // Loop through anchors
+  for (let i = 0; i < numAnchors; i++) {
+    // Row 4 is confidence (if single class)
+    const conf = output[4 * numAnchors + i]; 
+    
+    if (conf > threshold) {
+      const cx = output[0 * numAnchors + i];
+      const cy = output[1 * numAnchors + i];
+      const w  = output[2 * numAnchors + i];
+      const h  = output[3 * numAnchors + i];
+      
+      const x1 = cx - w/2;
+      const y1 = cy - h/2;
+      const x2 = cx + w/2;
+      const y2 = cy + h/2;
+      
+      boxes.push({ 
+        x1, y1, x2, y2, 
+        conf, 
+        label: 'fire' 
+      });
+    }
+  }
+
+  return nms(boxes);
+}
+
+function nms(boxes) {
+  if (boxes.length === 0) return [];
+  
+  // Sort by confidence
+  boxes.sort((a,b) => b.conf - a.conf);
+  
+  const selected = [];
+  while (boxes.length > 0) {
+    const best = boxes.shift();
+    selected.push(best);
+    
+    boxes = boxes.filter(b => {
+      const iou = calculateIoU(best, b);
+      return iou < 0.45; // NMS Threshold
+    });
+  }
+  
+  // Scale boxes back to video size
+  const scaleX = video.videoWidth / 640;
+  const scaleY = video.videoHeight / 640;
+  
+  return selected.map(b => ({
+    x: b.x1 * scaleX,
+    y: b.y1 * scaleY,
+    w: (b.x2 - b.x1) * scaleX,
+    h: (b.y2 - b.y1) * scaleY,
+    conf: b.conf,
+    label: b.label
+  }));
+}
+
+function calculateIoU(boxA, boxB) {
+  const xA = Math.max(boxA.x1, boxB.x1);
+  const yA = Math.max(boxA.y1, boxB.y1);
+  const xB = Math.min(boxA.x2, boxB.x2);
+  const yB = Math.min(boxA.y2, boxB.y2);
+  const interArea = Math.max(0, xB - xA) * Math.max(0, yB - yA);
+  const boxAArea = (boxA.x2 - boxA.x1) * (boxA.y2 - boxA.y1);
+  const boxBArea = (boxB.x2 - boxB.x1) * (boxB.y2 - boxB.y1);
+  return interArea / (boxAArea + boxBArea - interArea);
+}
+
+// --- ALGORITHM 2: HSV Rules ---
+function runHSVInference() {
+  document.getElementById('glassBoxText').textContent = "Mode: HSV (Rule-based)\n1. Scan: Iterating pixels\n2. Filter: Checking Hue < 25 (Orange/Red), Sat > 50%, Val > 60%\n3. Aggregate: Finding min/max bounds of matching pixels.";
+  
+  const w = canvas.width;
+  const h = canvas.height;
+  
+  // Draw current frame to hidden context to read pixels
+  ctx.drawImage(video, 0, 0, w, h);
+  const frameData = ctx.getImageData(0, 0, w, h);
+  const data = frameData.data;
+  
+  let minX = w, minY = h, maxX = 0, maxY = 0;
+  let pixelCount = 0;
+  
+  // Stride for performance
+  const stride = 4; 
+  for (let y = 0; y < h; y += stride) {
+    for (let x = 0; x < w; x += stride) {
+      const i = (y * w + x) * 4;
+      const r = data[i], g = data[i+1], b = data[i+2];
+      
+      // Simple pre-check: Red dominance
+      if (r > 160 && r > g && g > b) {
+        // Full HSV check
+        const hsv = rgbToHsv(r, g, b); // [0-360, 0-1, 0-1]
+        
+        // Fire logic: 
+        // Hue: 0-30 (Red/Orange) or 340-360 (Red)
+        // Sat: > 0.5 (Vivid)
+        // Val: > 0.6 (Bright)
+        if ((hsv[0] < 30 || hsv[0] > 340) && hsv[1] > 0.5 && hsv[2] > 0.6) {
+             if (x < minX) minX = x;
+             if (x > maxX) maxX = x;
+             if (y < minY) minY = y;
+             if (y > maxY) maxY = y;
+             pixelCount++;
+        }
+      }
+    }
+  }
+  
+  // Noise filter: Need a cluster of pixels to call it fire
+  if (pixelCount > 60) {
+    // Fake confidence based on density
+    const area = (maxX - minX) * (maxY - minY);
+    const density = pixelCount / (area / (stride*stride)); 
+    const conf = Math.min(0.99, density + 0.3); // Heuristic
+
+    if (conf >= threshold) {
+      return [{
+        x: minX, y: minY,
+        w: maxX - minX, h: maxY - minY,
+        conf: conf,
+        label: 'HSV-Fire'
+      }];
+    }
+  }
+  return [];
+}
+
+function rgbToHsv(r, g, b) {
+  r /= 255, g /= 255, b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, v = max;
+  const d = max - min;
+  s = max === 0 ? 0 : d / max;
+  if (max === min) {
+    h = 0; 
+  } else {
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return [h * 360, s, v];
+}
+
+// --- Draw & Stats ---
+function updateStats(detections) {
+  const valid = detections.filter(d => d.conf >= threshold);
+  
   if (valid.length > 0) {
     document.getElementById('statFire').textContent = 'DETECTED';
-    document.getElementById('statFire').style.color = '#ff4444';
     document.getElementById('statStatus').textContent = 'ALERT';
-    document.getElementById('statStatus').style.color = '#ff4444';
     document.getElementById('statCount').textContent = valid.length;
     
-    const best = valid.reduce((p, c) => p.confidence > c.confidence ? p : c);
-    document.getElementById('statConf').textContent = (best.confidence * 100).toFixed(0) + '%';
-
-    valid.forEach(d => drawBox(d));
+    const best = valid.reduce((p, c) => p.conf > c.conf ? p : c);
+    document.getElementById('statConf').textContent = (best.conf * 100).toFixed(0) + '%';
   } else {
     document.getElementById('statFire').textContent = 'CLEAR';
-    document.getElementById('statFire').style.color = '#00e676';
+    
     document.getElementById('statStatus').textContent = 'SCANNING';
-    document.getElementById('statStatus').style.color = '#00e676';
+
     document.getElementById('statConf').textContent = '—';
+    document.getElementById('statCount').textContent = 0;
   }
 }
 
-function drawBox(d) {
-  let [x, y, x2, y2] = d.bbox || d.box; 
-  // Handle different bbox formats if needed
-  if (!x2) { x2 = x + 100; y2 = y + 100; } // Fallback
+function drawDetections(list) {
+  list.forEach(d => {
+    if (d.conf < threshold) return;
+    
+    const x = d.x; 
+    const y = d.y;
+    const w = d.w;
+    const h = d.h;
+    
+    const label = `${d.label} ${(d.conf*100).toFixed(0)}%`;
 
-  const w = x2 - x;
-  const h = y2 - y;
-  const label = `${d.label || 'fire'} ${(d.confidence*100).toFixed(0)}%`;
+    // Draw Box
+    ctx.strokeStyle = activeMode === 'onnx' ? '#ff4444' : '#f59e0b';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x, y, w, h);
 
-  ctx.strokeStyle = '#ff4444';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(x, y, w, h);
+    // Draw Label
+    ctx.fillStyle = activeMode === 'onnx' ? '#ff4444' : '#f59e0b';
+    const textW = ctx.measureText(label).width + 10;
+    ctx.fillRect(x, y - 24, textW, 24);
 
-  ctx.fillStyle = '#ff4444';
-  const textW = ctx.measureText(label).width + 10;
-  ctx.fillRect(x, y - 24, textW, 24);
-
-  ctx.fillStyle = 'white';
-  ctx.font = 'bold 14px Inter, sans-serif';
-  ctx.fillText(label, x + 5, y - 7);
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 14px Inter, sans-serif';
+    ctx.fillText(label, x + 5, y - 7);
+  });
 }
+
+// Auto Init
+window.onload = () => {
+    // Default to ONNX
+    setMode('onnx');
+};
 </script>
 
 </body>

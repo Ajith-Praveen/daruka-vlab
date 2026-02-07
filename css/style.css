@@ -330,3 +330,38 @@ h1 { font-size: 2.4rem; margin-bottom: 24px; color: #fff; }
     font-size: 1rem;
   }
 }
+
+/* ===== ONNX / HSV MODE TOGGLE ===== */
+.mode-toggle {
+  display: flex;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.mode-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-btn:hover {
+  color: var(--text);
+}
+
+.mode-btn.active {
+  background: rgba(255,152,0,0.15);
+  color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(255,152,0,0.35);
+}
